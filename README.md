@@ -325,6 +325,81 @@ generate_stub_file(package_path, config=config)
 - `get_refs()` - Extract reference info from type hints
 - `get_dependencies()` - Get dependency classes from type hints
 
+## Design Rationale
+
+### Why Two Patterns?
+
+dataclass-dsl provides two complementary mechanisms for expressing references:
+
+1. **No-parens pattern** (`parent = Parent`) - Runtime detection
+2. **Annotated markers** (`parent: Annotated[Parent, Ref()]`) - Static type checking
+
+These serve different purposes:
+
+| Concern | No-Parens | Annotated |
+|---------|-----------|-----------|
+| Serialization | ✓ Detected from class defaults | ✓ Detected from type hints |
+| Dependency ordering | ✓ `is_class_ref(default)` | ✓ `get_dependencies(cls)` |
+| IDE autocomplete | ✗ Sees `type[Parent]` | ✓ Sees `Parent` directly |
+| Type error detection | ✗ No static checking | ✓ Wrong type = red squiggle |
+| Refactoring support | ✗ String-like | ✓ Rename propagates |
+
+### When No-Parens Is Sufficient
+
+For declarative class definitions with class-level defaults, no-parens handles everything at runtime:
+
+```python
+@refs
+class MyFunction:
+    role = MyRole          # Detected as dependency
+    role_arn = MyRole.Arn  # Detected as attribute reference
+```
+
+The runtime can detect `MyRole` is a dependency because it *is* the value.
+
+### When Annotated Markers Add Value
+
+**1. IDE Type Checking** - Critical for catching errors before runtime:
+
+```python
+@refs
+class MyFunction:
+    # IDE shows error if you pass a Bucket where Role expected
+    role: Annotated[MyRole, Ref()] = MyRole
+```
+
+**2. Imperative Style** - When constructing instances programmatically:
+
+```python
+# Without annotation, IDE can't validate this
+function = MyFunction(role=some_role)
+
+# With annotation on the class, IDE catches type mismatches
+role: Annotated[MyRole, Ref()]
+```
+
+**3. Forward References** - When the target class isn't defined yet:
+
+```python
+from __future__ import annotations
+
+@refs
+class MyFunction:
+    # Can reference MyRole before it's defined
+    role: Annotated[MyRole, Ref()] = None
+
+@refs
+class MyRole:
+    name = "my-role"
+```
+
+### The Bottom Line
+
+- **No-parens** handles runtime behavior (serialization, dependency detection)
+- **Annotated markers** handle static analysis (IDE support, type checking)
+
+If IDE type checking is important to your workflow, use both. The runtime detection ensures serialization works regardless of annotations, while annotations give you the IDE experience.
+
 ## The No-Parens Pattern in Detail
 
 The no-parens pattern works through two mechanisms:
