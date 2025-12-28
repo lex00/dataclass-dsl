@@ -1,0 +1,344 @@
+# dataclass-dsl
+
+Dataclass runtime machinery for declarative DSLs using the **no-parens pattern**.
+
+## The No-Parens Pattern
+
+The no-parens pattern enables declarative references without function calls:
+
+```python
+# Traditional approach (requires parentheses)
+parent = get_ref(Parent)
+parent_id = get_attr(Parent, "Id")
+
+# No-parens pattern (cleaner, more declarative)
+parent = Parent          # Direct class reference
+parent_id = Parent.Id    # Attribute reference
+```
+
+This library provides the runtime machinery to enable this pattern in dataclass-based DSLs.
+
+## Type Annotations with Annotated
+
+For type-safe references, use `typing.Annotated` with the provided markers:
+
+```python
+from typing import Annotated
+from dataclass_dsl import Ref, Attr, create_decorator
+
+refs = create_decorator()
+
+@refs
+class Network:
+    cidr: str = "10.0.0.0/16"
+
+@refs
+class Subnet:
+    # Type checker sees Network, frameworks see Ref() marker
+    network: Annotated[Network, Ref()] = None
+    # Type checker sees str, frameworks see Attr(Gateway, "Id")
+    gateway_id: Annotated[str, Attr(Gateway, "Id")] = ""
+```
+
+## Installation
+
+```bash
+pip install dataclass-dsl
+```
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from dataclass_dsl import create_decorator, ResourceRegistry
+
+# Create a domain-specific decorator
+registry = ResourceRegistry()
+refs = create_decorator(registry=registry)
+
+@refs
+class Object1:
+    name = "object-1"  # Type inferred as str
+
+@refs
+class Object2:
+    # No-parens pattern - types inferred from defaults
+    parent = Object1
+    parent_id = Object1.Id
+```
+
+### Multi-File Package with `from . import *`
+
+The primary use case is organizing resources across multiple files:
+
+**`mypackage/objects/__init__.py`**
+```python
+from dataclass_dsl import setup_resources, StubConfig
+
+stub_config = StubConfig(
+    package_name="mypackage",
+    core_imports=["refs", "Object1", "Object2"],
+)
+setup_resources(__file__, __name__, globals(), stub_config=stub_config)
+```
+
+**`mypackage/objects/object1.py`**
+```python
+from . import *  # refs available via setup_resources()
+
+@refs
+class Object1:
+    name = "object-1"
+```
+
+**`mypackage/objects/object2.py`**
+```python
+from . import *  # refs, Object1 available via setup_resources()
+
+@refs
+class Object2:
+    # No-parens pattern - reference Object1 without imports
+    parent = Object1
+    parent_id = Object1.Id
+```
+
+**Usage:**
+```python
+from mypackage.objects import *  # All objects available
+
+obj = Object2()
+print(obj.parent)     # <class 'Object1'>
+print(obj.parent_id)  # AttrRef(Object1, 'Id')
+```
+
+## Core Features
+
+### No-Parens Class References
+
+Reference another decorated class directly by name:
+
+```python
+@refs
+class Object1:
+    value = "base"
+
+@refs
+class Object2:
+    # No-parens: Object1 becomes a field default
+    parent = Object1
+
+obj = Object2()
+assert obj.parent is Object1
+```
+
+### No-Parens Attribute References (AttrRef)
+
+Access attributes on decorated classes to create `AttrRef` markers:
+
+```python
+@refs
+class Object1:
+    name = "object-1"
+
+@refs
+class Object2:
+    # No-parens: Object1.Id returns AttrRef(Object1, "Id")
+    parent_id = Object1.Id
+
+obj = Object2()
+assert obj.parent_id.target is Object1
+assert obj.parent_id.attr == "Id"
+```
+
+### Dependency Detection
+
+The library detects dependencies from both patterns:
+
+```python
+from dataclass_dsl import get_all_dependencies
+
+deps = get_all_dependencies(Object2)
+assert Object1 in deps
+```
+
+### Topological Ordering
+
+Sort objects by their dependencies for creation/deletion:
+
+```python
+from dataclass_dsl import get_creation_order, get_deletion_order
+
+@refs
+class Object1:
+    name = "base"
+
+@refs
+class Object2:
+    parent = Object1
+
+@refs
+class Object3:
+    parent = Object2
+
+# Dependencies first (for creation)
+order = get_creation_order([Object3, Object2, Object1])
+# -> [Object1, Object2, Object3]
+
+# Dependents first (for deletion)
+order = get_deletion_order([Object3, Object2, Object1])
+# -> [Object3, Object2, Object1]
+```
+
+### Resource Registry
+
+Track decorated classes for discovery:
+
+```python
+registry = ResourceRegistry()
+refs = create_decorator(registry=registry)
+
+@refs
+class Object1:
+    name = "base"
+
+@refs
+class Object2:
+    parent = Object1
+
+@refs
+class Object3:
+    parent = Object2
+
+all_objects = registry.get_all()
+assert Object1 in all_objects
+assert Object2 in all_objects
+assert Object3 in all_objects
+```
+
+### Template Aggregation
+
+Collect and serialize objects:
+
+```python
+from dataclass_dsl import Template
+
+template = Template.from_registry(
+    registry=registry,
+    description="My objects",
+)
+
+# Objects returned in dependency order
+for obj in template.get_dependency_order():
+    print(type(obj).__name__)
+```
+
+### Provider Pattern
+
+Abstract interface for domain-specific serialization:
+
+```python
+from dataclass_dsl import Provider
+
+class MyProvider(Provider):
+    name = "myformat"
+
+    def serialize_ref(self, source, target):
+        return {"ref": target.__name__}
+
+    def serialize_attr(self, source, target, attr_name):
+        return {"attr": f"{target.__name__}.{attr_name}"}
+
+    def serialize_resource(self, resource):
+        return {"type": type(resource).__name__}
+
+output = template.to_dict(provider=MyProvider())
+```
+
+### IDE Stub Generation
+
+Generate `.pyi` files for IDE autocomplete with dynamic imports:
+
+```python
+from dataclass_dsl import StubConfig, generate_stub_file
+
+config = StubConfig(
+    package_name="mypackage",
+    core_imports=["refs", "Object1", "Object2"],
+)
+generate_stub_file(package_path, config=config)
+```
+
+## API Reference
+
+### Core
+
+- `AttrRef` - Runtime marker for attribute references (`Object1.Id`)
+- `RefMeta` - Metaclass enabling no-parens attribute interception
+- `create_decorator()` - Factory for domain-specific decorators
+
+### Registry
+
+- `ResourceRegistry` - Thread-safe registry for decorated classes
+
+### Ordering
+
+- `get_all_dependencies()` - Get all dependencies of a class
+- `topological_sort()` - Sort by dependency order
+- `get_creation_order()` - Dependencies first
+- `get_deletion_order()` - Dependents first
+- `detect_cycles()` - Find circular dependencies
+- `get_dependency_graph()` - Build adjacency list
+
+### Provider
+
+- `Provider` - Abstract base class for serialization
+
+### Template
+
+- `Template` - Base class for object aggregation
+
+### Loader
+
+- `setup_resources()` - Import modules in dependency order for `from . import *`
+
+### Stubs
+
+- `StubConfig` - Configuration for stub generation
+- `generate_stub_file()` - Generate `.pyi` for IDE support
+
+### Helpers
+
+- `is_attr_ref()` - Check if object is AttrRef
+- `is_class_ref()` - Check if object is decorated class
+- `get_ref_target()` - Extract target from reference
+- `apply_metaclass()` - Apply metaclass to existing class
+
+### Type Markers (Annotated-based)
+
+- `Ref` - Marker for reference relationship (`Annotated[T, Ref()]`)
+- `Attr` - Marker for attribute reference (`Annotated[str, Attr(T, "name")]`)
+- `RefList` - Marker for list of references
+- `RefDict` - Marker for dict with reference values
+- `ContextRef` - Marker for context reference
+- `RefInfo` - Metadata about a reference field
+- `get_refs()` - Extract reference info from type hints
+- `get_dependencies()` - Get dependency classes from type hints
+
+## The No-Parens Pattern in Detail
+
+The no-parens pattern works through two mechanisms:
+
+1. **RefMeta Metaclass**: Intercepts attribute access on decorated classes. When you access an undefined attribute like `Object1.Id`, it returns `AttrRef(Object1, "Id")` instead of raising `AttributeError`.
+
+2. **Decorator Processing**: The `create_decorator()` factory creates decorators that:
+   - Apply `@dataclass` transformation
+   - Apply `RefMeta` metaclass
+   - Handle class and AttrRef defaults as dataclass fields
+   - Register classes with the optional registry
+
+This enables clean, declarative DSLs where relationships between objects are expressed directly through class names rather than function calls.
+
+## License
+
+Apache 2.0
