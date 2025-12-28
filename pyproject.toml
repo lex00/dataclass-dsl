@@ -1,6 +1,6 @@
 [project]
 name = "dataclass-dsl"
-version = "0.1.0"
+version = "0.1.1"
 description = "Dataclass runtime machinery for declarative DSLs"
 readme = "README.md"
 authors = [
