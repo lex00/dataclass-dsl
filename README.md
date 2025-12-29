@@ -376,6 +376,14 @@ generate_stub_file(package_path, config=config)
 - `escape_string()` - Escape for Python source code
 - `escape_docstring()` - Escape for docstrings
 
+### Importer Framework (for template parsing)
+
+Generic graph algorithms for dependency ordering in template importers:
+
+- `find_sccs_in_graph()` - Find strongly connected components (Tarjan's algorithm)
+- `topological_sort_graph()` - Sort nodes in dependency order
+- `order_scc_by_dependencies()` - Order nodes within an SCC to minimize forward refs
+
 ## Design Rationale
 
 ### Why Two Patterns?

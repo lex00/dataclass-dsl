@@ -137,6 +137,13 @@ from dataclass_dsl._codegen import (
     to_snake_case,
 )
 
+# Importer framework utilities
+from dataclass_dsl._importer import (
+    find_sccs_in_graph,
+    order_scc_by_dependencies,
+    topological_sort_graph,
+)
+
 # Inspection utilities for dynamic list generation
 from dataclass_dsl._inspect import (
     build_reverse_constant_map,
@@ -237,6 +244,10 @@ __all__ = [
     "is_valid_python_identifier",
     "escape_string",
     "escape_docstring",
+    # Importer framework utilities
+    "find_sccs_in_graph",
+    "topological_sort_graph",
+    "order_scc_by_dependencies",
     # Inspection utilities
     "get_package_modules",
     "get_module_constants",
