@@ -209,11 +209,13 @@ def create_decorator(
                         )
 
             # Add a default to the resource field if configured
+            # Note: Use __dict__ directly to avoid triggering RefMeta.__getattr__
+            # which would return an AttrRef instead of checking actual attribute
             if resource_field and hasattr(cls, "__annotations__"):
                 if resource_field in cls.__annotations__:
                     if (
-                        not hasattr(cls, resource_field)
-                        or getattr(cls, resource_field) is MISSING
+                        resource_field not in cls.__dict__
+                        or cls.__dict__.get(resource_field) is MISSING
                     ):
                         setattr(cls, resource_field, None)
 
