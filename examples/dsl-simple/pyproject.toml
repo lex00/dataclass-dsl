@@ -5,10 +5,6 @@ description = "Example DSL using dataclass-dsl"
 requires-python = ">=3.11"
 dependencies = [
     "dataclass-dsl>=0.1.0",
-]
-
-[project.optional-dependencies]
-dev = [
     "pytest>=7.4",
 ]
 

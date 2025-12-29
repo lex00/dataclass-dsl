@@ -41,7 +41,6 @@ dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "ruff>=0.1",
-    "black>=23.12",
 ]
 
 [project.urls]
@@ -81,16 +80,10 @@ dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "ruff>=0.1",
-    "black>=23.12",
 ]
 docs = [
     "pdoc>=14.0",
 ]
-
-[tool.black]
-line-length = 88
-target-version = ['py311']
-include = '\.pyi?$'
 
 [tool.ruff]
 line-length = 88
