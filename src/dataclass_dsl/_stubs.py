@@ -137,6 +137,34 @@ def find_class_definitions(source: str) -> list[str]:
     return re.findall(r"^class\s+(\w+)", source, re.MULTILINE)
 
 
+def _extract_relative_module_name(import_line: str) -> str | None:
+    """Extract module name from a relative star import.
+
+    Args:
+        import_line: An import statement like "from .params import *".
+
+    Returns:
+        Module name (e.g., "params") or None if not a relative star import.
+
+    Example:
+        >>> _extract_relative_module_name("from .params import *  # noqa")
+        'params'
+        >>> _extract_relative_module_name("from .main import *")
+        'main'
+        >>> _extract_relative_module_name("from wetwire_aws import *")
+        None
+    """
+    clean_line = import_line
+    if "#" in clean_line:
+        clean_line = clean_line.split("#")[0].strip()
+
+    # Match "from .module import *" pattern
+    match = re.match(r"from\s+\.(\w+)\s+import\s+\*", clean_line)
+    if match:
+        return match.group(1)
+    return None
+
+
 def expand_star_import(
     import_line: str,
     config: StubConfig | None = None,
@@ -291,14 +319,17 @@ def generate_stub_file(
     init_stub_path = package_path / "__init__.pyi"
     init_lines = ['"""Auto-generated stub for IDE type checking."""', ""]
 
-    # Add extra header lines from config
-    if config and config.extra_header_lines:
-        init_lines.extend(config.extra_header_lines)
-        init_lines.append("")
-
     # Read __init__.py to extract and process imports
     init_file = package_path / "__init__.py"
     imported_names: list[str] = []
+
+    # Add extra header lines from config and extract imported names
+    if config and config.extra_header_lines:
+        init_lines.extend(config.extra_header_lines)
+        init_lines.append("")
+    # Use core_imports from config - these are all the names that should be in __all__
+    if config and config.core_imports:
+        imported_names.extend(config.core_imports)
 
     if init_file.exists():
         init_source = init_file.read_text()
@@ -325,6 +356,23 @@ def generate_stub_file(
                     in_import = True
                     import_buffer = [line]
                 else:
+                    # Check for relative star imports (e.g., "from .params import *")
+                    relative_module = _extract_relative_module_name(line)
+                    if relative_module:
+                        # Read the local module file and extract class names
+                        module_file = package_path / f"{relative_module}.py"
+                        if module_file.exists():
+                            module_source = module_file.read_text()
+                            class_names = find_class_definitions(module_source)
+                            # Add to module_classes for re-export generation
+                            if relative_module not in module_classes:
+                                module_classes[relative_module] = []
+                            for cls in class_names:
+                                if cls not in module_classes[relative_module]:
+                                    module_classes[relative_module].append(cls)
+                            # Don't add star import to stub - will be explicit
+                            continue
+
                     # Try to expand star imports from known modules
                     expanded_line, star_names = expand_star_import(line, config)
                     init_lines.append(expanded_line)
