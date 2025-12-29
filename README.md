@@ -306,6 +306,7 @@ generate_stub_file(package_path, config=config)
 
 - `StubConfig` - Configuration for stub generation
 - `generate_stub_file()` - Generate `.pyi` for IDE support
+- `regenerate_stubs_for_path()` - Regenerate stubs after code changes
 
 ### Helpers
 
@@ -336,6 +337,18 @@ generate_stub_file(package_path, config=config)
 - `add_common_args()` - Add standard --module, --scope, --verbose args
 - `create_list_command()` - Factory for 'list' command handler
 - `create_validate_command()` - Factory for 'validate' command handler
+- `create_build_command()` - Factory for 'build' command handler
+- `create_lint_command()` - Factory for 'lint' command handler with auto-fix
+- `LintIssue` - Dataclass for structured lint results
+- `RefTransformer` - Type alias for ref transformation callbacks
+
+### Inspection Utilities
+
+- `get_package_modules()` - Find all submodule names in a package
+- `get_module_constants()` - Extract UPPERCASE constants from a module
+- `get_module_exports()` - Get public exports from a module
+- `collect_exports()` - Collect exports from multiple modules
+- `build_reverse_constant_map()` - Build value→name mapping from constants
 
 ### IR (Intermediate Representation)
 
