@@ -33,6 +33,7 @@ __all__ = [
     "is_resource_package",
     "find_resource_packages",
     "generate_stubs_for_path",
+    "regenerate_stubs_for_path",
 ]
 
 
@@ -503,3 +504,80 @@ def generate_stubs_for_path(
         generate_stub_file(package_path, config=config)
 
     return len(packages)
+
+
+def regenerate_stubs_for_path(
+    path: Path,
+    config: StubConfig,
+    verbose: bool = False,
+) -> int:
+    """Regenerate stubs for resource packages after code changes.
+
+    This is designed for use after lint fixes - it scans for packages
+    using setup_resources() and regenerates their stubs.
+
+    Args:
+        path: Directory or file path to scan.
+        config: Domain-specific stub configuration.
+        verbose: If True, print regeneration info.
+
+    Returns:
+        Number of packages that had stubs regenerated.
+
+    Example:
+        >>> from pathlib import Path
+        >>> from mypackage import MY_STUB_CONFIG
+        >>> count = regenerate_stubs_for_path(Path("myproject"), MY_STUB_CONFIG)
+        >>> count >= 0
+        True
+    """
+    import ast
+
+    path = Path(path).resolve()
+    count = 0
+
+    # Find all __init__.py files
+    if path.is_file():
+        init_files = [path] if path.name == "__init__.py" else []
+    else:
+        init_files = list(path.rglob("__init__.py"))
+
+    for init_file in init_files:
+        try:
+            content = init_file.read_text()
+            if "setup_resources" not in content:
+                continue
+
+            # Parse to find exported classes
+            pkg_dir = init_file.parent
+            py_files = [f for f in pkg_dir.glob("*.py") if not f.name.startswith("_")]
+
+            # Extract class names from each file
+            all_names: list[str] = []
+            module_classes: dict[str, list[str]] = {}
+
+            for py_file in py_files:
+                try:
+                    source = py_file.read_text()
+                    tree = ast.parse(source)
+                    classes = []
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.ClassDef):
+                            classes.append(node.name)
+                            all_names.append(node.name)
+                    if classes:
+                        module_classes[py_file.stem] = classes
+                except Exception:
+                    continue
+
+            if all_names:
+                generate_stub_file(pkg_dir, all_names, module_classes, config=config)
+                count += 1
+                if verbose:
+                    print(f"Regenerated stubs: {pkg_dir}")
+
+        except Exception as e:
+            if verbose:
+                print(f"Error regenerating stubs for {init_file}: {e}")
+
+    return count

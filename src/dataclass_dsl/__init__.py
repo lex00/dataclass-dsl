@@ -99,7 +99,10 @@ from dataclass_dsl._resource import Resource
 
 # CLI framework utilities
 from dataclass_dsl._cli import (
+    LintIssue,
     add_common_args,
+    create_build_command,
+    create_lint_command,
     create_list_command,
     create_validate_command,
     discover_resources,
@@ -134,6 +137,15 @@ from dataclass_dsl._codegen import (
     to_snake_case,
 )
 
+# Inspection utilities for dynamic list generation
+from dataclass_dsl._inspect import (
+    build_reverse_constant_map,
+    collect_exports,
+    get_module_constants,
+    get_module_exports,
+    get_package_modules,
+)
+
 # Registry for tracking decorated classes
 from dataclass_dsl._registry import ResourceRegistry
 
@@ -144,10 +156,11 @@ from dataclass_dsl._stubs import (
     find_resource_packages,
     generate_stub_file,
     generate_stubs_for_path,
+    regenerate_stubs_for_path,
 )
 
 # Template base class
-from dataclass_dsl._template import Template
+from dataclass_dsl._template import RefTransformer, Template
 
 # Type markers (Annotated-based)
 from dataclass_dsl._types import (
@@ -195,11 +208,15 @@ __all__ = [
     "PropertyType",
     # Template
     "Template",
+    "RefTransformer",
     # CLI framework
     "discover_resources",
     "add_common_args",
     "create_list_command",
     "create_validate_command",
+    "create_build_command",
+    "create_lint_command",
+    "LintIssue",
     # IR base classes
     "IRProperty",
     "IRParameter",
@@ -220,6 +237,12 @@ __all__ = [
     "is_valid_python_identifier",
     "escape_string",
     "escape_docstring",
+    # Inspection utilities
+    "get_package_modules",
+    "get_module_constants",
+    "get_module_exports",
+    "collect_exports",
+    "build_reverse_constant_map",
     # Loader
     "setup_resources",
     "find_refs_in_source",
