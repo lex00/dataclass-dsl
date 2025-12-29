@@ -93,6 +93,47 @@ from dataclass_dsl._ordering import (
 # Provider ABC for serialization
 from dataclass_dsl._provider import Provider
 
+# Base classes for infrastructure resources
+from dataclass_dsl._property_type import PropertyType
+from dataclass_dsl._resource import Resource
+
+# CLI framework utilities
+from dataclass_dsl._cli import (
+    add_common_args,
+    create_list_command,
+    create_validate_command,
+    discover_resources,
+)
+
+# IR (Intermediate Representation) base classes
+from dataclass_dsl._ir import (
+    IROutput,
+    IRParameter,
+    IRProperty,
+    IRResource,
+    IRTemplate,
+)
+
+# Serialization framework
+from dataclass_dsl._serialization import (
+    FieldMapper,
+    PascalCaseMapper,
+    SnakeCaseMapper,
+    ValueSerializer,
+)
+
+# Codegen utilities
+from dataclass_dsl._codegen import (
+    PYTHON_KEYWORDS,
+    escape_docstring,
+    escape_string,
+    is_valid_python_identifier,
+    sanitize_class_name,
+    sanitize_python_name,
+    to_pascal_case,
+    to_snake_case,
+)
+
 # Registry for tracking decorated classes
 from dataclass_dsl._registry import ResourceRegistry
 
@@ -149,8 +190,36 @@ __all__ = [
     "get_dependency_graph",
     # Provider
     "Provider",
+    # Base classes
+    "Resource",
+    "PropertyType",
     # Template
     "Template",
+    # CLI framework
+    "discover_resources",
+    "add_common_args",
+    "create_list_command",
+    "create_validate_command",
+    # IR base classes
+    "IRProperty",
+    "IRParameter",
+    "IRResource",
+    "IROutput",
+    "IRTemplate",
+    # Serialization framework
+    "FieldMapper",
+    "PascalCaseMapper",
+    "SnakeCaseMapper",
+    "ValueSerializer",
+    # Codegen utilities
+    "PYTHON_KEYWORDS",
+    "to_snake_case",
+    "to_pascal_case",
+    "sanitize_python_name",
+    "sanitize_class_name",
+    "is_valid_python_identifier",
+    "escape_string",
+    "escape_docstring",
     # Loader
     "setup_resources",
     "find_refs_in_source",
