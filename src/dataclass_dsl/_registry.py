@@ -64,9 +64,9 @@ class ResourceRegistry:
     def __init__(self) -> None:
         """Initialize an empty registry."""
         self._resources: dict[str, type[Any]] = {}  # class_name -> class
-        self._by_type: dict[type[Any] | str, list[type[Any]]] = (
-            {}
-        )  # resource_type -> [classes]
+        self._by_type: dict[
+            type[Any] | str, list[type[Any]]
+        ] = {}  # resource_type -> [classes]
         self._lock = Lock()
 
     def register(

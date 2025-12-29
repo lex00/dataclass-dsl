@@ -67,8 +67,8 @@ jobs:
       - name: Run ruff (linter)
         run: uv run ruff check src/ tests/ --output-format=github
 
-      - name: Run black (formatter check)
-        run: uv run black --check src/ tests/
+      - name: Run ruff format (formatter check)
+        run: uv run ruff format --check src/ tests/
 
   typecheck:
     name: Type Check (${{ matrix.checker }})
