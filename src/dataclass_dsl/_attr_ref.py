@@ -77,3 +77,27 @@ class AttrRef:
     def __hash__(self) -> int:
         """Return hash value for use in sets/dicts."""
         return hash((id(self.target), self.attr))
+
+    def __getattr__(self, name: str) -> AttrRef:
+        """Support chained attribute access like Object1.Endpoint.Address.
+
+        When accessing a nested attribute on an AttrRef, this creates a new
+        AttrRef with a dotted attribute path:
+
+            Object1.Endpoint        # Returns AttrRef(Object1, "Endpoint")
+            Object1.Endpoint.Address  # Returns AttrRef(Object1, "Endpoint.Address")
+
+        This enables serializers to handle nested attribute references properly,
+        for example generating {"Fn::GetAtt": ["Object1", "Endpoint.Address"]}
+        in CloudFormation.
+
+        Note: Dunder methods (e.g., __fspath__, __class__) are not intercepted
+        to avoid breaking Python's internal protocols.
+        """
+        # Don't intercept dunder methods - they're Python internals
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
+        chained_attr = f"{self.attr}.{name}"
+        return AttrRef(self.target, chained_attr)

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2025-12-29
+
+### Fixed
+
+- Sync `__version__` with pyproject.toml version
+- Add `regenerate_stubs_for_path` to public exports (`__all__`)
+
+### Changed
+
+- Clarify planned vs implemented features in documentation
+- Mark `@computed`, `when()`, `match()` as planned features in concepts guide
+- Update SPECIFICATION.md to identify extension points (Presets, Traits, Computed Values, Conditionals)
+- Update conformance table to reflect what's implemented in core vs domain packages
+
 ## [0.1.2] - 2024-12-29
 
 ### Changed

@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import MISSING, fields
 from typing import Any
 
+from dataclass_dsl._importer.topology import find_sccs_in_graph
 from dataclass_dsl._types import get_dependencies as _get_annotated_dependencies
 from dataclass_dsl._utils import DEFAULT_MARKER, is_attr_ref, is_class_ref
 
@@ -220,52 +221,14 @@ def detect_cycles(
     if not classes:
         return []
 
-    # Build adjacency list
-    class_set = set(classes)
-    graph: dict[type[Any], set[type[Any]]] = {}
-    for cls in classes:
-        deps = get_all_dependencies(cls, marker)
-        graph[cls] = deps & class_set  # Only consider deps within our set
+    # Build dependency graph
+    graph = get_dependency_graph(classes, marker)
 
-    # Tarjan's algorithm for finding SCCs
-    index_counter = [0]
-    stack: list[type[Any]] = []
-    lowlinks: dict[type[Any], int] = {}
-    index: dict[type[Any], int] = {}
-    on_stack: set[type[Any]] = set()
-    sccs: list[tuple[type[Any], ...]] = []
+    # Use generic SCC algorithm
+    sccs = find_sccs_in_graph(graph)
 
-    def strongconnect(v: type[Any]) -> None:
-        index[v] = index_counter[0]
-        lowlinks[v] = index_counter[0]
-        index_counter[0] += 1
-        stack.append(v)
-        on_stack.add(v)
-
-        for w in graph.get(v, set()):
-            if w not in index:
-                strongconnect(w)
-                lowlinks[v] = min(lowlinks[v], lowlinks[w])
-            elif w in on_stack:
-                lowlinks[v] = min(lowlinks[v], index[w])
-
-        if lowlinks[v] == index[v]:
-            scc: list[type[Any]] = []
-            while True:
-                w = stack.pop()
-                on_stack.remove(w)
-                scc.append(w)
-                if w == v:
-                    break
-            # Only report as cycle if more than one element
-            if len(scc) > 1:
-                sccs.append(tuple(scc))
-
-    for cls in classes:
-        if cls not in index:
-            strongconnect(cls)
-
-    return sccs
+    # Filter to only return cycles (SCCs with more than one element)
+    return [tuple(scc) for scc in sccs if len(scc) > 1]
 
 
 def get_dependency_graph(

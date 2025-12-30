@@ -306,6 +306,7 @@ generate_stub_file(package_path, config=config)
 
 - `StubConfig` - Configuration for stub generation
 - `generate_stub_file()` - Generate `.pyi` for IDE support
+- `regenerate_stubs_for_path()` - Regenerate stubs after code changes
 
 ### Helpers
 
@@ -324,6 +325,64 @@ generate_stub_file(package_path, config=config)
 - `RefInfo` - Metadata about a reference field
 - `get_refs()` - Extract reference info from type hints
 - `get_dependencies()` - Get dependency classes from type hints
+
+### Base Classes (for domain packages)
+
+- `Resource` - Abstract base class for infrastructure resources
+- `PropertyType` - Abstract base class for nested property types
+
+### CLI Framework
+
+- `discover_resources()` - Import module to trigger resource registration
+- `add_common_args()` - Add standard --module, --scope, --verbose args
+- `create_list_command()` - Factory for 'list' command handler
+- `create_validate_command()` - Factory for 'validate' command handler
+- `create_build_command()` - Factory for 'build' command handler
+- `create_lint_command()` - Factory for 'lint' command handler with auto-fix
+- `LintIssue` - Dataclass for structured lint results
+- `RefTransformer` - Type alias for ref transformation callbacks
+
+### Inspection Utilities
+
+- `get_package_modules()` - Find all submodule names in a package
+- `get_module_constants()` - Extract UPPERCASE constants from a module
+- `get_module_exports()` - Get public exports from a module
+- `collect_exports()` - Collect exports from multiple modules
+- `build_reverse_constant_map()` - Build value→name mapping from constants
+
+### IR (Intermediate Representation)
+
+- `IRProperty` - A property key-value pair
+- `IRParameter` - A template parameter
+- `IRResource` - A parsed resource with properties
+- `IROutput` - A template output
+- `IRTemplate` - Complete parsed template
+
+### Serialization Framework
+
+- `FieldMapper` - Abstract base for field name mapping
+- `PascalCaseMapper` - Maps snake_case to/from PascalCase
+- `SnakeCaseMapper` - Identity mapper for snake_case formats
+- `ValueSerializer` - Abstract base for value serialization
+
+### Codegen Utilities
+
+- `PYTHON_KEYWORDS` - Set of Python reserved keywords
+- `to_snake_case()` - Convert PascalCase to snake_case
+- `to_pascal_case()` - Convert snake_case to PascalCase
+- `sanitize_python_name()` - Escape Python keywords
+- `sanitize_class_name()` - Ensure valid class names
+- `is_valid_python_identifier()` - Check identifier validity
+- `escape_string()` - Escape for Python source code
+- `escape_docstring()` - Escape for docstrings
+
+### Importer Framework (for template parsing)
+
+Generic graph algorithms for dependency ordering in template importers:
+
+- `find_sccs_in_graph()` - Find strongly connected components (Tarjan's algorithm)
+- `topological_sort_graph()` - Sort nodes in dependency order
+- `order_scc_by_dependencies()` - Order nodes within an SCC to minimize forward refs
 
 ## Design Rationale
 

@@ -8,6 +8,7 @@ to various output formats via providers.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +18,11 @@ from dataclass_dsl._registry import ResourceRegistry
 if TYPE_CHECKING:
     from dataclass_dsl._provider import Provider
 
-__all__ = ["Template"]
+__all__ = ["Template", "RefTransformer"]
+
+# Type alias for ref transformer callback
+# (field_name, value, wrapper_instance) -> transformed_value
+RefTransformer = Callable[[str, Any, Any], Any]
 
 
 @dataclass
@@ -63,37 +68,73 @@ class Template:
         registry: ResourceRegistry,
         description: str = "",
         scope_package: str | None = None,
+        ref_transformer: RefTransformer | None = None,
         **kwargs: Any,
     ) -> Template:
         """
         Build a template from registered resources.
 
         Creates instances of all registered wrapper classes and
-        aggregates them into a template.
+        aggregates them into a template. Optionally transforms
+        references using a domain-specific callback.
 
         Args:
             registry: The registry to get resources from.
             description: Template description.
             scope_package: Only include resources from this package prefix.
+            ref_transformer: Optional callback to transform field values.
+                Called as ref_transformer(field_name, value, instance)
+                for each field. Use to convert AttrRef/class refs to
+                domain-specific intrinsics.
             **kwargs: Additional template attributes.
 
         Returns:
             A Template containing all matching resources.
 
         Example:
+            >>> # Simple usage
             >>> template = Template.from_registry(
             ...     registry=my_registry,
             ...     description="Production stack",
             ...     scope_package="myproject.prod",
             ... )
+            >>>
+            >>> # With ref transformer for domain-specific intrinsics
+            >>> def transform_refs(name, value, instance):
+            ...     if is_attr_ref(value):
+            ...         return GetAtt(value.target.__name__, value.attr)
+            ...     elif is_class_ref(value):
+            ...         return Ref(value.__name__)
+            ...     return value
+            >>>
+            >>> template = Template.from_registry(
+            ...     registry=my_registry,
+            ...     ref_transformer=transform_refs,
+            ... )
         """
-        wrapper_classes = registry.get_all(scope_package=scope_package)
+        from dataclass_dsl._ordering import topological_sort
+
+        wrapper_classes = list(registry.get_all(scope_package=scope_package))
+
+        # Topologically sort by dependencies (dependencies first)
+        sorted_classes = topological_sort(wrapper_classes)
 
         # Instantiate all wrapper classes
         resources = []
-        for wrapper_cls in wrapper_classes:
+        for wrapper_cls in sorted_classes:
             try:
                 instance = wrapper_cls()
+
+                # Apply ref transformer if provided
+                if ref_transformer is not None:
+                    for field_name in list(instance.__dict__.keys()):
+                        if field_name.startswith("_"):
+                            continue
+                        value = getattr(instance, field_name)
+                        transformed = ref_transformer(field_name, value, instance)
+                        if transformed is not value:
+                            setattr(instance, field_name, transformed)
+
                 resources.append(instance)
             except Exception as e:
                 # Log but don't fail - some classes might need special handling

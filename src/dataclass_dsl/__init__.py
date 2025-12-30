@@ -60,13 +60,61 @@ Example:
 from __future__ import annotations
 
 # Version
-__version__ = "0.1.0"
+__version__ = "0.1.3"
 
 # Runtime marker for attribute references
 from dataclass_dsl._attr_ref import AttrRef
 
+# CLI framework utilities
+from dataclass_dsl._cli import (
+    LintIssue,
+    add_common_args,
+    create_build_command,
+    create_lint_command,
+    create_list_command,
+    create_validate_command,
+    discover_resources,
+)
+
+# Codegen utilities
+from dataclass_dsl._codegen import (
+    PYTHON_KEYWORDS,
+    escape_docstring,
+    escape_string,
+    is_valid_python_identifier,
+    sanitize_class_name,
+    sanitize_python_name,
+    to_pascal_case,
+    to_snake_case,
+)
+
 # Decorator factory
 from dataclass_dsl._decorator import create_decorator
+
+# Importer framework utilities
+from dataclass_dsl._importer import (
+    find_sccs_in_graph,
+    order_scc_by_dependencies,
+    topological_sort_graph,
+)
+
+# Inspection utilities for dynamic list generation
+from dataclass_dsl._inspect import (
+    build_reverse_constant_map,
+    collect_exports,
+    get_module_constants,
+    get_module_exports,
+    get_package_modules,
+)
+
+# IR (Intermediate Representation) base classes
+from dataclass_dsl._ir import (
+    IROutput,
+    IRParameter,
+    IRProperty,
+    IRResource,
+    IRTemplate,
+)
 
 # Loader for multi-file packages
 from dataclass_dsl._loader import (
@@ -90,11 +138,23 @@ from dataclass_dsl._ordering import (
     topological_sort,
 )
 
+# Base classes for infrastructure resources
+from dataclass_dsl._property_type import PropertyType
+
 # Provider ABC for serialization
 from dataclass_dsl._provider import Provider
 
 # Registry for tracking decorated classes
 from dataclass_dsl._registry import ResourceRegistry
+from dataclass_dsl._resource import Resource
+
+# Serialization framework
+from dataclass_dsl._serialization import (
+    FieldMapper,
+    PascalCaseMapper,
+    SnakeCaseMapper,
+    ValueSerializer,
+)
 
 # Stub generation for IDE support
 from dataclass_dsl._stubs import (
@@ -103,10 +163,11 @@ from dataclass_dsl._stubs import (
     find_resource_packages,
     generate_stub_file,
     generate_stubs_for_path,
+    regenerate_stubs_for_path,
 )
 
 # Template base class
-from dataclass_dsl._template import Template
+from dataclass_dsl._template import RefTransformer, Template
 
 # Type markers (Annotated-based)
 from dataclass_dsl._types import (
@@ -149,8 +210,50 @@ __all__ = [
     "get_dependency_graph",
     # Provider
     "Provider",
+    # Base classes
+    "Resource",
+    "PropertyType",
     # Template
     "Template",
+    "RefTransformer",
+    # CLI framework
+    "discover_resources",
+    "add_common_args",
+    "create_list_command",
+    "create_validate_command",
+    "create_build_command",
+    "create_lint_command",
+    "LintIssue",
+    # IR base classes
+    "IRProperty",
+    "IRParameter",
+    "IRResource",
+    "IROutput",
+    "IRTemplate",
+    # Serialization framework
+    "FieldMapper",
+    "PascalCaseMapper",
+    "SnakeCaseMapper",
+    "ValueSerializer",
+    # Codegen utilities
+    "PYTHON_KEYWORDS",
+    "to_snake_case",
+    "to_pascal_case",
+    "sanitize_python_name",
+    "sanitize_class_name",
+    "is_valid_python_identifier",
+    "escape_string",
+    "escape_docstring",
+    # Importer framework utilities
+    "find_sccs_in_graph",
+    "topological_sort_graph",
+    "order_scc_by_dependencies",
+    # Inspection utilities
+    "get_package_modules",
+    "get_module_constants",
+    "get_module_exports",
+    "collect_exports",
+    "build_reverse_constant_map",
     # Loader
     "setup_resources",
     "find_refs_in_source",
@@ -161,6 +264,7 @@ __all__ = [
     "find_class_definitions",
     "find_resource_packages",
     "generate_stubs_for_path",
+    "regenerate_stubs_for_path",
     # Helpers
     "is_attr_ref",
     "is_class_ref",
