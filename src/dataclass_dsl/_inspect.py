@@ -51,7 +51,7 @@ def get_package_modules(package: str | ModuleType) -> list[str]:
         return []
 
     modules = []
-    for importer, modname, ispkg in pkgutil.iter_modules(package.__path__):
+    for _importer, modname, _ispkg in pkgutil.iter_modules(package.__path__):
         # Skip private modules
         if not modname.startswith("_"):
             modules.append(modname)

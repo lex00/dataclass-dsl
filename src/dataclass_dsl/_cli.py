@@ -27,10 +27,13 @@ import argparse
 import importlib
 import sys
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from dataclass_dsl._registry import ResourceRegistry
+    from dataclass_dsl._template import Template
 
 __all__ = [
     "discover_resources",
@@ -236,11 +239,6 @@ def create_validate_command(
     return validate_command
 
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Protocol
-
-
 @dataclass
 class LintIssue:
     """A linting issue found in source code.
@@ -271,7 +269,7 @@ class FixerProtocol(Protocol):
 
 
 def create_build_command(
-    template_class: type,
+    template_class: type[Template],
     registry: ResourceRegistry,
     ref_transformer: Callable[[str, Any, Any], Any] | None = None,
     provider_factory: Callable[[], Any] | None = None,

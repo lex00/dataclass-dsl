@@ -164,7 +164,7 @@ class TestAttrRef:
 
         # Dunder methods should raise AttributeError, not create AttrRefs
         with pytest.raises(AttributeError):
-            ref.__fspath__
+            _ = ref.__fspath__
 
         with pytest.raises(AttributeError):
-            ref.__class_getitem__
+            _ = ref.__class_getitem__

@@ -18,7 +18,7 @@ Where each node maps to the set of nodes it depends on.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TypeVar
 
 __all__ = [
@@ -31,7 +31,7 @@ T = TypeVar("T")
 
 
 def find_sccs_in_graph(
-    graph: dict[T, set[T] | list[T] | Iterable[T]],
+    graph: Mapping[T, set[T] | list[T] | Iterable[T]],
 ) -> list[list[T]]:
     """Find strongly connected components using Tarjan's algorithm.
 

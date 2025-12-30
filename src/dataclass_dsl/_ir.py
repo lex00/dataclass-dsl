@@ -14,10 +14,11 @@ The IR hierarchy:
 Example:
     >>> from dataclass_dsl._ir import IRTemplate, IRResource, IRProperty
     >>>
+    >>> prop = IRProperty("BucketName", "bucket_name", "my-bucket")
     >>> resource = IRResource(
     ...     logical_id="MyBucket",
     ...     resource_type="AWS::S3::Bucket",
-    ...     properties={"bucket_name": IRProperty("BucketName", "bucket_name", "my-bucket")},
+    ...     properties={"bucket_name": prop},
     ... )
     >>> template = IRTemplate(resources={"MyBucket": resource})
 """

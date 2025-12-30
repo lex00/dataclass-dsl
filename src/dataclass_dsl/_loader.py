@@ -26,6 +26,7 @@ from __future__ import annotations
 import importlib.util
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
@@ -50,7 +51,7 @@ class _AttributePlaceholder:
 
     Example:
         MyRole = _ClassPlaceholder("MyRole", "mypackage.roles")
-        arn = MyRole.Arn  # Returns _AttributePlaceholder("MyRole", "Arn", "mypackage.roles")
+        arn = MyRole.Arn  # Returns _AttributePlaceholder(...)
 
     After all modules are loaded, _resolve_value() converts this to a real
     attribute access or GetAtt call depending on the domain.
@@ -78,11 +79,11 @@ class _AttributePlaceholder:
             )
         return False
 
-    def __getattr__(self, attr: str) -> "_AttributePlaceholder":
+    def __getattr__(self, attr: str) -> _AttributePlaceholder:
         """Support chained attribute access like MyDB.Endpoint.Address."""
         if attr.startswith("_"):
             raise AttributeError(attr)
-        # Chain: MyDB.Endpoint.Address -> _AttributePlaceholder("MyDB", "Endpoint.Address")
+        # Chain: MyDB.Endpoint.Address -> ("MyDB", "Endpoint.Address")
         return _AttributePlaceholder(
             self._class_name, f"{self._attr_name}.{attr}", self._module
         )
@@ -246,7 +247,8 @@ def find_refs_in_source(source: str) -> set[str]:
 
     # Match class names as dict values: 'key': ClassName or "key": ClassName
     # e.g., {'awslogs-group': CloudwatchLogsGroup, ...}
-    for match in re.finditer(r"['\"][\w-]+['\"]\s*:\s*([a-zA-Z][A-Za-z0-9]*)\b", source):
+    dict_value_pattern = r"['\"][\w-]+['\"]\s*:\s*([a-zA-Z][A-Za-z0-9]*)\b"
+    for match in re.finditer(dict_value_pattern, source):
         name = match.group(1)
         # Require at least one uppercase letter to distinguish from variables
         if any(c.isupper() for c in name):
@@ -296,7 +298,7 @@ def _resolve_value(value: Any, class_map: dict[str, type]) -> Any:
         # Resolve attribute placeholders like MyRole.Arn
         real_class = class_map.get(value._class_name)
         if real_class is not None:
-            # Walk the attribute chain (e.g., "Endpoint.Address" -> ["Endpoint", "Address"])
+            # Walk the attribute chain: "Endpoint.Address" -> ["Endpoint", "Address"]
             result = real_class
             for attr_part in value._attr_name.split("."):
                 result = getattr(result, attr_part)
@@ -470,13 +472,13 @@ def _apply_metaclass_to_resource_classes(
         if resource_field not in annotations:
             continue
         # Apply metaclass in place
-        new_cls = apply_metaclass(obj, RefMeta)
+        new_cls: type = apply_metaclass(obj, RefMeta)
         setattr(module, name, new_cls)
 
 
 def _make_metaclass_applying_build_class(
     resource_field: str = "resource",
-) -> callable:
+) -> Callable[..., type]:
     """Create a __build_class__ wrapper that applies RefMeta to resource classes.
 
     This enables the invisible decorator pattern for within-file forward refs.
@@ -500,9 +502,11 @@ def _make_metaclass_applying_build_class(
 
     original_build_class = builtins.__build_class__
 
-    def metaclass_applying_build_class(func, name, *bases, **kwargs):
+    def metaclass_applying_build_class(
+        func: Callable[..., None], name: str, *bases: type, **kwargs: Any
+    ) -> type:
         # First, build the class normally
-        cls = original_build_class(func, name, *bases, **kwargs)
+        cls: type = original_build_class(func, name, *bases, **kwargs)
 
         # Check if this is a resource class that needs RefMeta
         annotations = getattr(cls, "__annotations__", {})

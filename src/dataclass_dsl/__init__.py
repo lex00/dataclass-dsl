@@ -65,8 +65,56 @@ __version__ = "0.1.3"
 # Runtime marker for attribute references
 from dataclass_dsl._attr_ref import AttrRef
 
+# CLI framework utilities
+from dataclass_dsl._cli import (
+    LintIssue,
+    add_common_args,
+    create_build_command,
+    create_lint_command,
+    create_list_command,
+    create_validate_command,
+    discover_resources,
+)
+
+# Codegen utilities
+from dataclass_dsl._codegen import (
+    PYTHON_KEYWORDS,
+    escape_docstring,
+    escape_string,
+    is_valid_python_identifier,
+    sanitize_class_name,
+    sanitize_python_name,
+    to_pascal_case,
+    to_snake_case,
+)
+
 # Decorator factory
 from dataclass_dsl._decorator import create_decorator
+
+# Importer framework utilities
+from dataclass_dsl._importer import (
+    find_sccs_in_graph,
+    order_scc_by_dependencies,
+    topological_sort_graph,
+)
+
+# Inspection utilities for dynamic list generation
+from dataclass_dsl._inspect import (
+    build_reverse_constant_map,
+    collect_exports,
+    get_module_constants,
+    get_module_exports,
+    get_package_modules,
+)
+
+# IR (Intermediate Representation) base classes
+from dataclass_dsl._ir import (
+    IROutput,
+    IRParameter,
+    IRProperty,
+    IRResource,
+    IRTemplate,
+)
 
 # Loader for multi-file packages
 from dataclass_dsl._loader import (
@@ -90,32 +138,15 @@ from dataclass_dsl._ordering import (
     topological_sort,
 )
 
+# Base classes for infrastructure resources
+from dataclass_dsl._property_type import PropertyType
+
 # Provider ABC for serialization
 from dataclass_dsl._provider import Provider
 
-# Base classes for infrastructure resources
-from dataclass_dsl._property_type import PropertyType
+# Registry for tracking decorated classes
+from dataclass_dsl._registry import ResourceRegistry
 from dataclass_dsl._resource import Resource
-
-# CLI framework utilities
-from dataclass_dsl._cli import (
-    LintIssue,
-    add_common_args,
-    create_build_command,
-    create_lint_command,
-    create_list_command,
-    create_validate_command,
-    discover_resources,
-)
-
-# IR (Intermediate Representation) base classes
-from dataclass_dsl._ir import (
-    IROutput,
-    IRParameter,
-    IRProperty,
-    IRResource,
-    IRTemplate,
-)
 
 # Serialization framework
 from dataclass_dsl._serialization import (
@@ -124,37 +155,6 @@ from dataclass_dsl._serialization import (
     SnakeCaseMapper,
     ValueSerializer,
 )
-
-# Codegen utilities
-from dataclass_dsl._codegen import (
-    PYTHON_KEYWORDS,
-    escape_docstring,
-    escape_string,
-    is_valid_python_identifier,
-    sanitize_class_name,
-    sanitize_python_name,
-    to_pascal_case,
-    to_snake_case,
-)
-
-# Importer framework utilities
-from dataclass_dsl._importer import (
-    find_sccs_in_graph,
-    order_scc_by_dependencies,
-    topological_sort_graph,
-)
-
-# Inspection utilities for dynamic list generation
-from dataclass_dsl._inspect import (
-    build_reverse_constant_map,
-    collect_exports,
-    get_module_constants,
-    get_module_exports,
-    get_package_modules,
-)
-
-# Registry for tracking decorated classes
-from dataclass_dsl._registry import ResourceRegistry
 
 # Stub generation for IDE support
 from dataclass_dsl._stubs import (
