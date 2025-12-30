@@ -60,7 +60,7 @@ Example:
 from __future__ import annotations
 
 # Version
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 # Runtime marker for attribute references
 from dataclass_dsl._attr_ref import AttrRef
@@ -264,6 +264,7 @@ __all__ = [
     "find_class_definitions",
     "find_resource_packages",
     "generate_stubs_for_path",
+    "regenerate_stubs_for_path",
     # Helpers
     "is_attr_ref",
     "is_class_ref",

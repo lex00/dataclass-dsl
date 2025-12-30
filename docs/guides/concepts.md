@@ -266,9 +266,11 @@ Providers define how to serialize:
 
 ---
 
-## Computed Values
+## Computed Values (Planned)
 
-Sometimes a property should be derived from other properties. Use `@computed`:
+> **Note:** This feature is planned but not yet implemented in dataclass-dsl.
+
+Sometimes a property should be derived from other properties. Domain packages may implement `@computed`:
 
 ```python
 @my_decorator
@@ -282,21 +284,23 @@ class NamingConvention:
         return f"{self.environment}-{self.app_name}-data"
 ```
 
-Computed values:
-- Are calculated at serialization time
-- Can reference other properties on the same class
-- Can reference context values
-- Are read-only (no setter)
+Computed values would:
+- Be calculated at serialization time
+- Reference other properties on the same class
+- Reference context values
+- Be read-only (no setter)
 
 ---
 
-## Conditionals
+## Conditionals (Planned)
 
-dataclass-dsl supports conditional resource creation and property values.
+> **Note:** These features are planned but not yet implemented in dataclass-dsl.
+
+Domain packages may implement conditional resource creation and property values.
 
 ### Conditional Properties
 
-Use `when()` to conditionally set a property:
+Domain packages may provide `when()` to conditionally set a property:
 
 ```python
 @my_decorator
@@ -311,7 +315,7 @@ class Database:
 
 ### Conditional Resources
 
-Resources can be conditionally created:
+Resources may be conditionally created:
 
 ```python
 @my_decorator
@@ -323,7 +327,7 @@ class BastionHost:
 
 ### Pattern Matching
 
-For multiple conditions, use `match()`:
+For multiple conditions, domain packages may provide `match()`:
 
 ```python
 @my_decorator

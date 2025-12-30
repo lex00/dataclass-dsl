@@ -346,11 +346,13 @@ When circular dependencies exist (A → B → A):
 
 ---
 
-## 11. Presets and Traits
+## 11. Presets and Traits (Extension Points)
+
+> **Note:** These patterns are recommended approaches for domain packages to implement. They are not provided by dataclass-dsl core but can be built using standard Python features.
 
 ### 11.1 Presets (Inheritance-Based Defaults)
 
-Base classes can provide default configurations:
+Base classes can provide default configurations using `__init_subclass__`:
 
 ```python
 class EncryptedStorage:
@@ -381,13 +383,17 @@ class MyBucket(Tagged, environment="prod", team="platform"):
 
 ---
 
-## 12. Computed Values
+## 12. Computed Values (Extension Point)
+
+> **Note:** This is a recommended pattern for domain packages. The `@computed` decorator is not provided by dataclass-dsl core.
 
 ### 12.1 Purpose
 
 Computed values are derived from other fields at serialization time.
 
 ### 12.2 Syntax
+
+Domain packages MAY implement a `@computed` decorator:
 
 ```python
 @decorator
@@ -403,20 +409,24 @@ class MyBucket:
 
 ### 12.3 Requirements
 
-Computed values MUST:
+If implemented, computed values SHOULD:
 1. Be evaluated at serialization time, not class definition time
 2. Have access to resolved context values
 3. Be cacheable (same inputs produce same outputs)
 
 ---
 
-## 13. Conditional Values
+## 13. Conditional Values (Extension Point)
+
+> **Note:** This is a recommended pattern for domain packages. The `when()` helper is not provided by dataclass-dsl core.
 
 ### 13.1 Purpose
 
 Conditional values allow configuration to vary based on context.
 
 ### 13.2 Syntax
+
+Domain packages MAY implement conditional helpers like `when()`:
 
 ```python
 @decorator
@@ -431,7 +441,7 @@ class MyDatabase:
 
 ### 13.3 Requirements
 
-Conditional helpers MUST:
+If implemented, conditional helpers SHOULD:
 1. Be evaluated at serialization time
 2. Have access to context values
 3. Support the target format's native conditionals when available
@@ -457,11 +467,13 @@ Implementations MUST support at least one of:
 
 ### 15.1 Levels
 
-| Level | Requirements |
-|-------|--------------|
-| Minimal | Wrapper pattern, reference detection, registry, serialization |
-| Standard | + Context, Provider interface, dependency ordering |
-| Full | + Presets, Traits, Computed values, Conditionals |
+| Level | Requirements | dataclass-dsl Core |
+|-------|--------------|-------------------|
+| Minimal | Wrapper pattern, reference detection, registry, serialization | Implemented |
+| Standard | + Context, Provider interface, dependency ordering | Implemented |
+| Full | + Presets, Traits, Computed values, Conditionals | Extension points (domain packages implement) |
+
+**Note:** dataclass-dsl core implements "Standard" level conformance. "Full" level features (Presets, Traits, Computed values, Conditionals) are extension points that domain packages can implement using the patterns described in this specification.
 
 ### 15.2 Validation
 
