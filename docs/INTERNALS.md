@@ -216,6 +216,54 @@ generate_stub_file(package_path, config=stub_config)
 regenerate_stubs_for_path(package_path)
 ```
 
+### Auto-Decoration
+
+To achieve the "invisible decorator" pattern where users don't write `@decorator` on their classes, use the `auto_decorate` option:
+
+```python
+from dataclass_dsl import setup_resources, create_decorator
+
+my_decorator = create_decorator()
+
+setup_resources(
+    __file__,
+    __name__,
+    globals(),
+    auto_decorate=True,
+    decorator=my_decorator,
+)
+```
+
+This automatically decorates any class with a `resource:` annotation:
+
+```python
+# User writes this (no decorator):
+class LogBucket:
+    resource: s3.Bucket
+    bucket_encryption = LogBucketEncryption
+
+# Becomes equivalent to:
+@my_decorator
+class LogBucket:
+    resource: s3.Bucket
+    bucket_encryption = LogBucketEncryption
+```
+
+**Options:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `auto_decorate` | `False` | Enable auto-decoration |
+| `decorator` | Required | The decorator function to apply |
+| `resource_field` | `"resource"` | Annotation field that identifies resource classes |
+| `marker_attr` | `"_refs_marker"` | Attribute used to detect already-decorated classes |
+
+**How it works:**
+
+1. After all modules are loaded, `setup_resources()` scans `package_globals`
+2. For each class with a `resource:` annotation that isn't already decorated, it applies the decorator
+3. AttrRef targets are updated to point to the new decorated classes (since decoration creates new class objects)
+
 ---
 
 ## Dependency Ordering
@@ -383,37 +431,23 @@ deps = get_dependencies(Subnet, transitive=False)
 
 ## Hiding the Decorator
 
-To achieve the "zero decorators" experience for end users, apply the decorator automatically in the loader:
+To achieve the "zero decorators" experience for end users, use the built-in `auto_decorate` option:
 
-**Option 1: In extra_namespace**
 ```python
-# The decorator is injected but users don't explicitly call it
+from dataclass_dsl import setup_resources, create_decorator
+
+my_decorator = create_decorator()
+
 setup_resources(
     __file__,
     __name__,
     globals(),
-    stub_config=stub_config,
-    extra_namespace={"my_decorator": my_decorator},
-    auto_decorate=True,  # If your loader supports this
+    auto_decorate=True,
+    decorator=my_decorator,
 )
 ```
 
-**Option 2: Custom loader**
-```python
-# Build a loader that applies the decorator after parsing
-def load_resource_file(path, namespace):
-    # Load the module
-    module = load_module(path, namespace)
-
-    # Apply decorator to all classes with 'resource' annotation
-    for name, obj in vars(module).items():
-        if isinstance(obj, type) and hasattr(obj, '__annotations__'):
-            if 'resource' in obj.__annotations__:
-                decorated = my_decorator(obj)
-                setattr(module, name, decorated)
-
-    return module
-```
+This automatically decorates any class with a `resource:` annotation. See [Auto-Decoration](#auto-decoration) for details.
 
 The key insight: the `resource:` type annotation marks a class for decoration, but the decorator is applied by the loader, not the user.
 
