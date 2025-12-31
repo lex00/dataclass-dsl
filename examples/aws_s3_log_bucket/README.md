@@ -92,6 +92,41 @@ When you import this package:
 
 This ensures serialization always produces valid output with dependencies declared before dependents.
 
+## Generated CloudFormation Output
+
+```python
+from examples.aws_s3_log_bucket import *
+from wetwire_aws import CloudFormationTemplate
+
+template = CloudFormationTemplate.from_registry(
+    scope_package='examples.aws_s3_log_bucket'
+)
+print(template.to_yaml())
+```
+
+Produces:
+
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  LogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+```
+
+Clean DSL in, valid CloudFormation out.
+
 ## Building Your Own Domain Package
 
 Anyone can build a domain package like wetwire-aws. See the [Internals Guide](../../docs/INTERNALS.md) for:
