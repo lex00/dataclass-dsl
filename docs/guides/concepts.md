@@ -1,29 +1,25 @@
 # Core Concepts
 
-This guide explains the fundamental concepts behind dataclass-dsl. Understanding these patterns will help you write effective declarative code and understand how the framework works.
+This guide explains the fundamental patterns you'll use when writing declarative code with a dataclass-dsl based domain package.
 
 ## Table of Contents
 
 1. [The Wrapper Pattern](#the-wrapper-pattern)
 2. [The No-Parens Principle](#the-no-parens-principle)
-3. [Reference Detection](#reference-detection)
-4. [The Registry](#the-registry)
-5. [Templates](#templates)
-6. [Context](#context)
-7. [Providers](#providers)
-8. [Computed Values](#computed-values)
-9. [Conditionals](#conditionals)
+3. [References](#references)
+4. [Multi-File Organization](#multi-file-organization)
+5. [Context Values](#context-values)
+6. [Output Formats](#output-formats)
 
 ---
 
 ## The Wrapper Pattern
 
-The core pattern in dataclass-dsl is **wrapping**: you create a class that wraps an underlying resource type.
+The core pattern is **wrapping**: you create a class that wraps an underlying resource type.
 
 ```python
-@my_decorator
 class LogBucket:
-    resource: Bucket           # The type being wrapped
+    resource: s3.Bucket        # The type being wrapped
     bucket_name = "app-logs"   # Properties of that type
 ```
 
@@ -31,19 +27,18 @@ class LogBucket:
 
 1. **Naming**: Your class name (`LogBucket`) becomes the logical resource name
 2. **Referencing**: Other resources refer to `LogBucket`, not a string ID
-3. **Type safety**: The decorator knows what properties are valid for `Bucket`
+3. **Type safety**: The domain package knows what properties are valid for `s3.Bucket`
 4. **Flat structure**: All properties are class attributes, no nesting
 
-**The `resource` field is special**: It declares what you're wrapping. It's never assigned a value — it's a type annotation that tells the decorator what kind of resource this is.
+**The `resource` field is special**: It declares what you're wrapping. It's a type annotation only — never assigned a value.
 
 ---
 
 ## The No-Parens Principle
 
-In dataclass-dsl, references to other resources are expressed as **class names without parentheses**:
+References to other resources are expressed as **class names without parentheses**:
 
 ```python
-@my_decorator
 class AppSubnet:
     resource: Subnet
     vpc = AppVPC              # Reference — just the class name
@@ -63,7 +58,7 @@ class AppSubnet:
     cidr_block = "10.0.1.0/24"
 ```
 
-**Benefits of no-parens:**
+**Benefits:**
 
 - **Readable**: Code looks like configuration, not imperative programming
 - **AI-friendly**: Easier for language models to parse and generate
@@ -72,43 +67,41 @@ class AppSubnet:
 
 ---
 
-## Reference Detection
+## References
 
-The decorator automatically detects references by analyzing your class. It recognizes:
+The domain package automatically detects references by analyzing your classes.
 
 ### Class References
 
-When a class attribute's value is another decorated class:
+Reference another resource by class name:
 
 ```python
-@my_decorator
 class WebServer:
     resource: Instance
-    subnet = WebSubnet        # Detected as Ref[WebSubnet]
+    subnet = WebSubnet        # Reference to WebSubnet
 ```
 
 ### Attribute References
 
-When you access an attribute of a decorated class:
+Reference a specific attribute of another resource:
 
 ```python
-@my_decorator
 class LambdaFunction:
     resource: Function
-    role = ExecutionRole.Arn  # Detected as Attr[ExecutionRole, "Arn"]
+    role_arn = ExecutionRole.Arn  # Gets the Arn of ExecutionRole
 ```
+
+This is useful when you need a specific output (like an ARN, ID, or endpoint) rather than a reference to the whole resource.
 
 ### Collection References
 
-Lists and dicts containing references:
+Lists and dicts can contain references:
 
 ```python
-@my_decorator
 class LoadBalancer:
     resource: ALB
     subnets = [SubnetA, SubnetB, SubnetC]  # List of references
 
-@my_decorator
 class SecurityConfig:
     resource: SecurityGroup
     rules = {
@@ -121,124 +114,91 @@ class SecurityConfig:
 
 - Primitive values: `name = "my-bucket"`
 - Dictionaries with primitive values: `tags = {"env": "prod"}`
-- External classes (not decorated)
+- Classes from outside the domain package
 
 ---
 
-## The Registry
+## Multi-File Organization
 
-Every decorated class is automatically registered when it's defined. The registry tracks:
+Resources are typically organized across multiple files with a single import:
 
-- All resource classes
-- Their resource types
-- Their module/package location
+**`resources/__init__.py`** — Sets up the package (handled by the domain package)
 
+**`resources/networking.py`**
 ```python
-# These classes register themselves automatically
-@my_decorator
-class MyVPC:
+from . import *
+
+class AppVPC:
     resource: VPC
     cidr_block = "10.0.0.0/16"
 
-@my_decorator
-class MySubnet:
+class WebSubnet:
     resource: Subnet
-    vpc = MyVPC
+    vpc = AppVPC
     cidr_block = "10.0.1.0/24"
-
-# Later, collect all resources from the registry
-template = Template.from_registry()
 ```
 
-### Scoped Discovery
-
-You can limit discovery to specific packages:
-
+**`resources/compute.py`**
 ```python
-# Only collect resources from 'my_stack.networking'
-template = Template.from_registry(
-    scope_package="my_stack.networking"
-)
+from . import *
+
+class WebServer:
+    resource: Instance
+    subnet = WebSubnet        # Available from networking.py
+    instance_type = "t3.medium"
 ```
 
-This is useful for:
-- Generating separate templates per module
-- Excluding test resources
-- Multi-stack architectures
+**Usage:**
+```python
+from resources import *
+
+# All resources available
+print(AppVPC, WebSubnet, WebServer)
+```
+
+The domain package handles:
+- Loading files in dependency order (networking before compute)
+- Making classes available across files
+- IDE autocomplete via generated stub files
 
 ---
 
-## Templates
+## Context Values
 
-A Template aggregates resources from the registry and serializes them to output formats.
-
-```python
-# Collect all registered resources
-template = Template.from_registry()
-
-# Generate output
-yaml_output = template.to_yaml()
-json_output = template.to_json()
-dict_output = template.to_dict()
-```
-
-Templates handle:
-- Collecting resources from the registry
-- Resolving references between resources
-- Ordering resources by dependencies
-- Serializing to the target format
-
-### Template Sections
-
-Domain templates may have additional sections:
+Some values are resolved at serialization or deployment time, not when you write the code:
 
 ```python
-# Domain-specific templates may support parameters, outputs, etc.
-template = DomainTemplate.from_registry(
-    parameters=[EnvironmentParam, InstanceTypeParam],
-    outputs=[VpcIdOutput, SubnetIdsOutput],
-)
-```
-
----
-
-## Context
-
-Context provides values that are resolved at serialization time, not definition time. This is useful for:
-
-- Environment-specific values
-- Platform pseudo-parameters
-- Dynamic values like account IDs
-
-```python
-@my_decorator
 class MyBucket:
     resource: Bucket
-    bucket_name = Sub("${AccountId}-app-data")
+    bucket_name = Sub("${AWS::AccountId}-app-data")
 ```
 
-When serialized, pseudo-parameters are resolved by the target platform at deployment time.
+Common context values (depending on the domain package):
+- Account/project identifiers
+- Region/location
+- Environment name
+- Stack/deployment name
+
+The exact syntax depends on your domain package and target platform.
 
 ---
 
-## Providers
+## Output Formats
 
-Providers handle format-specific serialization. The same resource declaration can produce different outputs:
+The same resource declarations can produce different output formats:
 
 ```python
-# Same declaration
-@my_decorator
 class MySubnet:
     resource: Subnet
     vpc = MyVPC
     cidr_block = "10.0.1.0/24"
 ```
 
-**JSON output (example):**
+**CloudFormation-style JSON:**
 ```json
 {
     "MySubnet": {
-        "Type": "Subnet",
+        "Type": "AWS::EC2::Subnet",
         "Properties": {
             "VpcId": {"Ref": "MyVPC"},
             "CidrBlock": "10.0.1.0/24"
@@ -247,7 +207,7 @@ class MySubnet:
 }
 ```
 
-**YAML output (example):**
+**Kubernetes-style YAML:**
 ```yaml
 apiVersion: v1
 kind: Subnet
@@ -259,21 +219,70 @@ spec:
   cidrBlock: 10.0.1.0/24
 ```
 
-Providers define how to serialize:
-- References
-- Attribute references
-- The overall template structure
+The domain package determines the output format through its provider implementation.
 
 ---
 
-## Computed Values (Planned)
+## Putting It Together
 
-> **Note:** This feature is planned but not yet implemented in dataclass-dsl.
-
-Sometimes a property should be derived from other properties. Domain packages may implement `@computed`:
+A complete example showing multiple concepts:
 
 ```python
-@my_decorator
+from . import *
+
+# Networking
+class AppVPC:
+    resource: VPC
+    cidr_block = "10.0.0.0/16"
+    enable_dns_hostnames = True
+
+class WebSubnet:
+    resource: Subnet
+    vpc = AppVPC
+    cidr_block = "10.0.1.0/24"
+    availability_zone = Sub("${AWS::Region}a")
+
+class WebSecurityGroup:
+    resource: SecurityGroup
+    vpc = AppVPC
+    description = "Web server security group"
+
+# Compute
+class WebServer:
+    resource: Instance
+    subnet = WebSubnet
+    security_groups = [WebSecurityGroup]
+    instance_type = "t3.medium"
+```
+
+Notice:
+- Single import at the top
+- No decorators
+- References are just class names
+- Flat structure with simple attribute assignments
+
+---
+
+## Design Philosophy
+
+| Goal | How It's Achieved |
+|------|-------------------|
+| **Flat** | Wrapper pattern with class attributes, no nesting |
+| **Readable** | No-parens references, declarative style |
+| **Type-safe** | Resource type annotations, IDE support |
+| **Multi-format** | Same declarations, different outputs |
+
+---
+
+## Extension Points
+
+Domain packages may provide additional features:
+
+### Computed Values
+
+Properties derived from other properties:
+
+```python
 class NamingConvention:
     resource: Bucket
     environment = "prod"
@@ -284,26 +293,11 @@ class NamingConvention:
         return f"{self.environment}-{self.app_name}-data"
 ```
 
-Computed values would:
-- Be calculated at serialization time
-- Reference other properties on the same class
-- Reference context values
-- Be read-only (no setter)
+### Conditional Values
 
----
-
-## Conditionals (Planned)
-
-> **Note:** These features are planned but not yet implemented in dataclass-dsl.
-
-Domain packages may implement conditional resource creation and property values.
-
-### Conditional Properties
-
-Domain packages may provide `when()` to conditionally set a property:
+Properties that vary based on context:
 
 ```python
-@my_decorator
 class Database:
     resource: DBInstance
     multi_az = when(
@@ -315,86 +309,20 @@ class Database:
 
 ### Conditional Resources
 
-Resources may be conditionally created:
+Resources created only under certain conditions:
 
 ```python
-@my_decorator
 class BastionHost:
     resource: Instance
-    condition = EnableBastion  # Only created if EnableBastion is true
+    condition = EnableBastion
     instance_type = "t3.micro"
 ```
 
-### Pattern Matching
-
-For multiple conditions, domain packages may provide `match()`:
-
-```python
-@my_decorator
-class WebServer:
-    resource: Instance
-    instance_type = match(
-        (Environment == "prod", "c5.xlarge"),
-        (Environment == "staging", "c5.large"),
-        default="t3.medium"
-    )
-```
+Check your domain package documentation for available extensions.
 
 ---
-
-## Putting It Together
-
-Here's a complete example showing multiple concepts:
-
-```python
-from my_domain import my_decorator, Sub
-
-# Base networking
-@my_decorator
-class AppVPC:
-    resource: VPC
-    cidr_block = "10.0.0.0/16"
-    enable_dns_hostnames = True
-
-@my_decorator
-class WebSubnet:
-    resource: Subnet
-    vpc_id = AppVPC                   # Reference (no-parens)
-    cidr_block = "10.0.1.0/24"
-    availability_zone = Sub("${Region}a")  # Context via Sub()
-
-@my_decorator
-class WebSecurityGroup:
-    resource: SecurityGroup
-    vpc_id = AppVPC                   # Reference (no-parens)
-    group_description = "Web server security group"
-
-# Compute
-@my_decorator
-class WebServer:
-    resource: Instance
-    subnet_id = WebSubnet             # Reference (no-parens)
-    security_group_ids = [WebSecurityGroup]  # List of references
-    instance_type = "t3.medium"
-
-# Generate template
-template = Template.from_registry()
-output = template.to_yaml()
-```
-
----
-
-## Design Philosophy
-
-These concepts work together to achieve dataclass-dsl's goals:
-
-| Goal | How It's Achieved |
-|------|-------------------|
-| **Flat** | Wrapper pattern with class attributes, no nesting |
-| **Type-safe** | Resource types, reference detection, IDE support |
-| **Readable** | No-parens references, declarative style |
-| **Multi-format** | Provider abstraction, domain-specific templates |
 
 ## Next Steps
 
-- [SPECIFICATION.md](../spec/SPECIFICATION.md) — Formal specification
+- [Specification](../spec/SPECIFICATION.md) — Formal specification of the pattern
+- [Internals Guide](../INTERNALS.md) — For building domain packages
