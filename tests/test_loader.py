@@ -4,8 +4,8 @@ import pytest
 
 from dataclass_dsl._attr_ref import AttrRef
 from dataclass_dsl._loader import (
-    _ClassPlaceholder,
     _auto_decorate_resources,
+    _ClassPlaceholder,
     _resolve_value,
     _update_attr_refs,
     find_class_definitions,
