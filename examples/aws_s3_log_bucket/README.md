@@ -2,6 +2,15 @@
 
 This example shows real output from [wetwire-aws](https://github.com/lex00/wetwire/tree/main/python/packages/wetwire-aws), a domain package built on dataclass-dsl.
 
+## Installation
+
+```bash
+cd examples/aws_s3_log_bucket
+pip install -e .
+```
+
+This installs the example package with its dependency on `wetwire-aws`.
+
 ## File Structure
 
 ```
