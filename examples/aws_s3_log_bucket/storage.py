@@ -1,3 +1,9 @@
+# Storage components for S3 bucket configuration.
+#
+# Note: These classes are in a separate file from LogBucket to demonstrate
+# cross-file references. The `from . import *` pattern allows bucket.py
+# to reference these classes without explicit imports.
+
 from . import *
 
 
@@ -27,10 +33,3 @@ class LogBucketPublicAccessBlock:
 class LogBucketVersioning:
     resource: s3.bucket.VersioningConfiguration
     status = s3.BucketVersioningStatus.ENABLED
-
-
-class LogBucket:
-    resource: s3.Bucket
-    bucket_encryption = LogBucketEncryption
-    public_access_block_configuration = LogBucketPublicAccessBlock
-    versioning_configuration = LogBucketVersioning

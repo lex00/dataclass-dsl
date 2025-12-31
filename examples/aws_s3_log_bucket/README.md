@@ -17,8 +17,11 @@ This installs the example package with its dependency on `wetwire-aws`.
 aws_s3_log_bucket/
 ├── __init__.py    # Package loader
 ├── __init__.pyi   # IDE stub (auto-generated)
-└── storage.py     # Resource definitions
+├── storage.py     # Component resources (encryption, versioning, etc.)
+└── bucket.py      # Main LogBucket resource (references storage.py classes)
 ```
+
+The resources are split across two files to demonstrate cross-file references.
 
 ## How dataclass-dsl Powers Each File
 
@@ -41,19 +44,34 @@ This single call uses dataclass-dsl's `setup_resources()` to:
 
 This is why `storage.py` can use `from . import *` and reference classes that might be defined in other files.
 
-### `storage.py` — Resource Definitions
+### `storage.py` — Component Resources
 
 ```python
+# Note: Split from bucket.py to demonstrate cross-file references.
 from . import *
 
 class LogBucketEncryptionDefault:
     resource: s3.bucket.ServerSideEncryptionByDefault
     sse_algorithm = s3.ServerSideEncryption.AES256
 
+class LogBucketEncryption:
+    resource: s3.bucket.BucketEncryption
+    server_side_encryption_configuration = [LogBucketEncryptionRule]
+...
+```
+
+### `bucket.py` — Main Resource
+
+```python
+# Note: LogBucketEncryption etc. are defined in storage.py but available
+# here via `from . import *` — no explicit imports needed.
+from . import *
+
 class LogBucket:
     resource: s3.Bucket
     bucket_encryption = LogBucketEncryption
-    ...
+    public_access_block_configuration = LogBucketPublicAccessBlock
+    versioning_configuration = LogBucketVersioning
 ```
 
 The decorator (applied automatically by the loader) uses dataclass-dsl to:
@@ -64,6 +82,8 @@ The decorator (applied automatically by the loader) uses dataclass-dsl to:
 4. **Apply RefMeta** so attribute access like `LogBucket.Arn` returns an `AttrRef`
 
 Users never see decorators — the loader applies them transparently.
+
+**Cross-file references work** because `setup_resources()` loads `storage.py` before `bucket.py` (topological order), making `LogBucketEncryption` available when `bucket.py` executes.
 
 ### `__init__.pyi` — IDE Stub
 

@@ -373,7 +373,7 @@ from wetwire_aws.resources import (
 
 from wetwire_aws.loader import setup_resources
 
-from .storage import LogBucket as LogBucket
+from .bucket import LogBucket as LogBucket
 from .storage import LogBucketEncryption as LogBucketEncryption
 from .storage import LogBucketEncryptionDefault as LogBucketEncryptionDefault
 from .storage import LogBucketEncryptionRule as LogBucketEncryptionRule
