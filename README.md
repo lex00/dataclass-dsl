@@ -96,7 +96,7 @@ If you're creating a domain package, see the [Internals Guide](docs/INTERNALS.md
 - Implementing a `Provider` for your target format
 - Generating IDE stubs for `from . import *`
 
-Also see the [working example](examples/dsl-simple/) for a complete implementation.
+Also see the [AWS S3 example](examples/aws_s3_log_bucket/) to see what a domain package produces.
 
 ## Documentation
 

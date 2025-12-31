@@ -534,13 +534,13 @@ from dataclass_dsl import (
 
 ## Complete Example
 
-See [examples/dsl-simple/](../examples/dsl-simple/) for a working domain package that demonstrates:
+See [examples/aws_s3_log_bucket/](../examples/aws_s3_log_bucket/) for an example of what a domain package produces. This example is from [wetwire-aws](https://github.com/lex00/wetwire/tree/main/python/packages/wetwire-aws) and demonstrates:
 
-- Custom decorator and registry
-- Multi-file organization with `from . import *`
-- Provider for JSON serialization
-- Template aggregation
-- IDE stub generation
+- Single import (`from . import *`)
+- No decorators visible to users
+- Flat wrapper classes with `resource:` type annotations
+- Type-safe references to AWS resource types
+- Composition through class references
 
 ---
 
