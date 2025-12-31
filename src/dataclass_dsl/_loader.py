@@ -716,7 +716,8 @@ def _update_attr_refs(
             elif isinstance(default, type) and default in class_mapping:
                 # Update class reference to point to decorated class
                 # We need to update the field's default in __dataclass_fields__
-                obj.__dataclass_fields__[fld.name].default = class_mapping[default]
+                # mypy doesn't track the hasattr check above
+                obj.__dataclass_fields__[fld.name].default = class_mapping[default]  # type: ignore[attr-defined]
 
 
 def setup_resources(
