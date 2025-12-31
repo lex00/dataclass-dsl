@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2025-12-31
+
+### Changed
+
+- Restructure documentation for end-user focus
+  - README now leads with clean DSL syntax (no decorators visible)
+  - Move technical internals to new `docs/INTERNALS.md`
+  - Update `docs/guides/concepts.md` to remove decorator examples
+  - Separate documentation by audience: end users vs domain package authors
+
+### Removed
+
+- Remove `examples/dsl-simple` synthetic example
+
+### Added
+
+- Add `examples/aws_s3_log_bucket` real-world example from [wetwire-aws](https://github.com/lex00/wetwire/tree/main/python/packages/wetwire-aws)
+  - Demonstrates cross-file references (storage.py → bucket.py)
+  - Includes full CloudFormation output in README
+  - Installable as a Python package with `wetwire-aws` dependency
+
 ## [0.1.3] - 2025-12-29
 
 ### Fixed
