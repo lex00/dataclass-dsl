@@ -40,6 +40,8 @@ __all__ = [
     "find_class_definitions",
     "_AttributePlaceholder",
     "_ClassPlaceholder",
+    "_auto_decorate_resources",
+    "_update_attr_refs",
 ]
 
 
@@ -617,6 +619,106 @@ def _load_module_with_namespace(
     return module
 
 
+def _auto_decorate_resources(
+    package_globals: dict[str, Any],
+    decorator: Callable[[type], type],
+    resource_field: str = "resource",
+    marker_attr: str = "_refs_marker",
+) -> dict[type, type]:
+    """Auto-decorate classes that have a resource annotation.
+
+    This enables the "invisible decorator" pattern where classes
+    with a `resource:` annotation are automatically decorated without
+    needing an explicit decorator.
+
+    Classes that are already decorated (have the marker attribute) are skipped.
+
+    Updates both package_globals and the original defining modules.
+
+    Args:
+        package_globals: The package's globals dict containing classes.
+        decorator: The decorator function to apply to each class.
+        resource_field: The annotation field that identifies resource classes.
+        marker_attr: The attribute set by the decorator to mark decorated classes.
+
+    Returns:
+        Mapping from old (pre-decorated) classes to new (decorated) classes.
+        Used by _update_attr_refs to fix references.
+    """
+    # Track old -> new class mapping for AttrRef updates
+    class_mapping: dict[type, type] = {}
+
+    for name, obj in list(package_globals.items()):
+        if not isinstance(obj, type):
+            continue
+
+        # Check for resource annotation
+        annotations = getattr(obj, "__annotations__", {})
+        if resource_field not in annotations:
+            continue
+
+        # Skip if already decorated (has marker attribute)
+        if hasattr(obj, marker_attr):
+            continue
+
+        # Apply decorator
+        decorated = decorator(obj)
+        class_mapping[obj] = decorated
+        package_globals[name] = decorated
+
+        # Also update the original module where the class was defined
+        orig_module_name = getattr(obj, "__module__", None)
+        if orig_module_name and orig_module_name in sys.modules:
+            orig_module = sys.modules[orig_module_name]
+            if hasattr(orig_module, name):
+                setattr(orig_module, name, decorated)
+
+    # Update AttrRef targets in all classes to point to decorated versions
+    if class_mapping:
+        _update_attr_refs(package_globals, class_mapping)
+
+    return class_mapping
+
+
+def _update_attr_refs(
+    package_globals: dict[str, Any],
+    class_mapping: dict[type, type],
+) -> None:
+    """Update AttrRef and class reference targets to point to decorated versions.
+
+    After auto-decoration creates new class objects, references in other classes
+    still point to the old (pre-decorated) classes. This function walks all
+    classes and updates those references.
+
+    Args:
+        package_globals: The package's globals dict containing classes.
+        class_mapping: Mapping from old classes to new decorated classes.
+    """
+    from dataclasses import fields
+
+    from dataclass_dsl._attr_ref import AttrRef
+
+    for obj in package_globals.values():
+        if not isinstance(obj, type):
+            continue
+
+        # Check if it's a dataclass with fields
+        if not hasattr(obj, "__dataclass_fields__"):
+            continue
+
+        for fld in fields(obj):
+            default = fld.default
+            if isinstance(default, AttrRef):
+                old_target = default.target
+                if old_target in class_mapping:
+                    # Update the AttrRef's target to the decorated class
+                    default.target = class_mapping[old_target]
+            elif isinstance(default, type) and default in class_mapping:
+                # Update class reference to point to decorated class
+                # We need to update the field's default in __dataclass_fields__
+                obj.__dataclass_fields__[fld.name].default = class_mapping[default]
+
+
 def setup_resources(
     init_file: str,
     package_name: str,
@@ -625,6 +727,10 @@ def setup_resources(
     stub_config: StubConfig | None = None,
     generate_stubs: bool = True,
     extra_namespace: dict[str, Any] | None = None,
+    auto_decorate: bool = False,
+    decorator: Callable[[type], type] | None = None,
+    resource_field: str = "resource",
+    marker_attr: str = "_refs_marker",
 ) -> None:
     """
     Set up resource imports with topological ordering for `from . import *`.
@@ -635,7 +741,8 @@ def setup_resources(
     3. Builds a dependency graph from the patterns
     4. Imports modules in topological order
     5. Injects previously-loaded classes into each module's namespace
-    6. Optionally generates .pyi stubs for IDE support
+    6. Optionally auto-decorates classes with resource annotations
+    7. Optionally generates .pyi stubs for IDE support
 
     Args:
         init_file: Path to __init__.py (__file__).
@@ -646,6 +753,14 @@ def setup_resources(
         extra_namespace: Optional dict of names to inject into each module's
             namespace before execution. Useful for domain packages to inject
             decorators, type markers, and helper functions.
+        auto_decorate: If True, automatically decorate classes that have a
+            resource annotation. This enables the "invisible decorator" pattern.
+        decorator: The decorator function to apply when auto_decorate is True.
+            Required if auto_decorate is True.
+        resource_field: The annotation field that identifies resource classes
+            for auto-decoration (default: "resource").
+        marker_attr: The attribute set by the decorator to mark decorated
+            classes, used to skip already-decorated classes (default: "_refs_marker").
 
     Example:
         # In mypackage/objects/__init__.py
@@ -656,7 +771,20 @@ def setup_resources(
             core_imports=["refs", "Object1", "Object2"],
         )
         setup_resources(__file__, __name__, globals(), stub_config=stub_config)
+
+    Example with auto-decoration:
+        # In mypackage/objects/__init__.py
+        from dataclass_dsl import setup_resources, create_decorator
+
+        my_decorator = create_decorator()
+        setup_resources(
+            __file__, __name__, globals(),
+            auto_decorate=True,
+            decorator=my_decorator,
+        )
     """
+    if auto_decorate and decorator is None:
+        raise ValueError("decorator is required when auto_decorate is True")
     pkg_path = Path(init_file).parent
 
     # 1. Discover module files and their class definitions/references
@@ -745,10 +873,21 @@ def setup_resources(
             if isinstance(obj, type):
                 _resolve_class_placeholders(obj, shared_namespace)
 
-    # 7. Set __all__ for star imports
+    # 7. Auto-decorate resource classes if enabled
+    # This applies the decorator to classes with resource annotations,
+    # enabling the "invisible decorator" pattern
+    if auto_decorate and decorator is not None:
+        _auto_decorate_resources(
+            package_globals,
+            decorator,
+            resource_field=resource_field,
+            marker_attr=marker_attr,
+        )
+
+    # 8. Set __all__ for star imports
     package_globals["__all__"] = all_names
 
-    # 8. Generate stubs for IDE support
+    # 9. Generate stubs for IDE support
     if generate_stubs and stub_config is not None:
         from dataclass_dsl._stubs import generate_stub_file
 
