@@ -6,7 +6,7 @@ Build declarative Python DSLs where infrastructure and configuration look like t
 from . import *
 
 class LogBucketEncryption:
-    resource: s3.bucket.BucketEncryption
+    resource: s3.Bucket.BucketEncryption
     server_side_encryption_configuration = [LogBucketEncryptionRule]
 
 class LogBucket:
@@ -50,7 +50,7 @@ class LambdaFunction:
 **Compose nested configurations:**
 ```python
 class BucketEncryption:
-    resource: s3.bucket.BucketEncryption
+    resource: s3.Bucket.BucketEncryption
     server_side_encryption_configuration = [EncryptionRule]
 
 class MyBucket:

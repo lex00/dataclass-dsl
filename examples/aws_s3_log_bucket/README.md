@@ -51,11 +51,11 @@ This is why `storage.py` can use `from . import *` and reference classes that mi
 from . import *
 
 class LogBucketEncryptionDefault:
-    resource: s3.bucket.ServerSideEncryptionByDefault
+    resource: s3.Bucket.ServerSideEncryptionByDefault
     sse_algorithm = s3.ServerSideEncryption.AES256
 
 class LogBucketEncryption:
-    resource: s3.bucket.BucketEncryption
+    resource: s3.Bucket.BucketEncryption
     server_side_encryption_configuration = [LogBucketEncryptionRule]
 ...
 ```
