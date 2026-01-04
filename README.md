@@ -107,4 +107,4 @@ Also see the [AWS S3 example](examples/aws_s3_log_bucket/) to see what a domain 
 
 ## License
 
-Apache 2.0
+MIT
