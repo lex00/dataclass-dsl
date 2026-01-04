@@ -1,6 +1,6 @@
 # dataclass-dsl Specification
 
-**Version:** 0.1
+**Version:** 1.0
 **Status:** Draft
 
 ## Abstract
