@@ -80,7 +80,7 @@ Domain packages use these primitives to create decorators and loaders that are i
 ## Installation
 
 ```bash
-pip install dataclass-dsl
+uv add dataclass-dsl
 ```
 
 ## Using a Domain Package

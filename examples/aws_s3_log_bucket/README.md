@@ -6,7 +6,7 @@ This example shows real output from [wetwire-aws](https://github.com/lex00/wetwi
 
 ```bash
 cd examples/aws_s3_log_bucket
-pip install -e .
+uv sync
 ```
 
 This installs the example package with its dependency on `wetwire-aws`.
