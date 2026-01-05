@@ -3,7 +3,7 @@
 The dataclass-dsl pattern provides full IDE support through:
 - Type annotations on all classes and functions
 - Generated `.pyi` stub files for dynamic imports
-- Compatibility with Pylance, mypy, and other type checkers
+- Compatibility with Pylance, ty, and other type checkers
 
 ## The Challenge
 
@@ -118,27 +118,15 @@ For best results, add to `.vscode/settings.json`:
 }
 ```
 
-## mypy Configuration
+## ty Configuration
 
-For mypy type checking, add to `pyproject.toml`:
+This project uses [ty](https://github.com/astral-sh/ty) (Astral's type checker) for type checking. To run type checks:
 
-```toml
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_ignores = true
-ignore_missing_imports = true
+```bash
+uv run ty check src/
 ```
 
-Or use `mypy.ini`:
-
-```ini
-[mypy]
-python_version = 3.11
-warn_return_any = True
-warn_unused_ignores = True
-ignore_missing_imports = True
-```
+ty is configured automatically and requires no additional setup.
 
 ## Handling Star Import Warnings
 

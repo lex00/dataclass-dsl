@@ -71,12 +71,8 @@ jobs:
         run: uv run ruff format --check src/ tests/
 
   typecheck:
-    name: Type Check (${{ matrix.checker }})
+    name: Type Check
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        checker: [mypy, pyright]
 
     steps:
       - name: Checkout code
@@ -93,13 +89,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run mypy
-        if: matrix.checker == 'mypy'
-        run: uv run mypy src/dataclass_dsl/
-
-      - name: Run pyright
-        if: matrix.checker == 'pyright'
-        run: uv run pyright src/dataclass_dsl/
+      - name: Run ty
+        run: uv run ty check src/dataclass_dsl/
 
   build:
     name: Build Package

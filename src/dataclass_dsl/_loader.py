@@ -599,7 +599,7 @@ def _load_module_with_namespace(
     import builtins
 
     original_build_class = builtins.__build_class__
-    builtins.__build_class__ = _make_metaclass_applying_build_class()
+    builtins.__build_class__ = _make_metaclass_applying_build_class()  # type: ignore[assignment]
 
     try:
         # Execute the module code
