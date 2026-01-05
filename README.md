@@ -1,5 +1,10 @@
 # dataclass-dsl
 
+[![CI](https://github.com/lex00/dataclass-dsl/actions/workflows/ci.yml/badge.svg)](https://github.com/lex00/dataclass-dsl/actions/workflows/ci.yml)
+[![PyPI Version](https://img.shields.io/pypi/v/dataclass-dsl.svg)](https://pypi.org/project/dataclass-dsl/)
+[![Python Version](https://img.shields.io/pypi/pyversions/dataclass-dsl.svg)](https://pypi.org/project/dataclass-dsl/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Build declarative Python DSLs where infrastructure and configuration look like this:
 
 ```python
