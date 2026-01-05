@@ -2,7 +2,7 @@
 Stub file generator for IDE type checking.
 
 Generates .pyi files so IDEs can understand dynamic imports from
-setup_resources(). Works with Pylance, mypy, and other type checkers.
+setup_resources(). Works with Pylance, ty, and other type checkers.
 
 The `from . import *` pattern requires stub files for IDE autocomplete
 because static analyzers can't see dynamic exports from setup_resources().
