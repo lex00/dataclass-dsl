@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Export `DecoratorType` Protocol for type-safe decorator parameter passing (#9)
 - Add `resource_predicate` parameter to `setup_resources()` for inheritance-based resource detection (#8)
 
+### Fixed
+
+- Preserve class identity when RefMeta is already applied, fixing AttrRef target identity issues (#10)
+
 ## [1.0.1] - 2026-01-04
 
 ### Changed
