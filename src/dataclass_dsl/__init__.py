@@ -60,7 +60,7 @@ Example:
 from __future__ import annotations
 
 # Version
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # Runtime marker for attribute references
 from dataclass_dsl._attr_ref import AttrRef
