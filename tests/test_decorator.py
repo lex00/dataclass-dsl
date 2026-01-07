@@ -1,9 +1,11 @@
 """Tests for create_decorator factory."""
 
 from dataclasses import fields
+from typing import Any
 
 from dataclass_dsl import (
     AttrRef,
+    DecoratorType,
     ResourceRegistry,
     create_decorator,
 )
@@ -239,3 +241,51 @@ class TestCreateDecorator:
         field_names = [f.name for f in fields(MyResource)]
         assert "name" in field_names
         assert "count" in field_names
+
+    def test_decorator_type_annotation(self):
+        """Test decorator has proper type annotation using DecoratorType.
+
+        Note: @dataclass_transform() makes type checkers interpret the return
+        type specially. Use DecoratorType for explicit type annotations, but
+        note that some type checkers may show warnings due to the interaction
+        with @dataclass_transform().
+        """
+        refs = create_decorator()
+
+        # The decorator should be usable with DecoratorType protocol
+        # Note: @dataclass_transform() changes how type checkers see this,
+        # so a type: ignore may be needed in practice
+        def apply_decorator(
+            decorator: DecoratorType,
+            cls: type[Any],
+        ) -> type[Any]:
+            return decorator(cls)
+
+        class TestClass:
+            name: str = "test"
+
+        # Should be able to use decorator in a typed function
+        # Type checkers may complain due to @dataclass_transform() interaction
+        result = apply_decorator(refs, TestClass)  # type: ignore[arg-type]
+        assert hasattr(result, "__dataclass_fields__")
+
+    def test_decorator_callable_signature(self):
+        """Test decorator returned by create_decorator() is callable."""
+        refs = create_decorator()
+
+        # Test @refs syntax (direct call with class)
+        class Class1:
+            name: str = "one"
+
+        result1 = refs(Class1)
+        assert hasattr(result1, "__dataclass_fields__")
+
+        # Test @refs() syntax (call without args returns decorator)
+        decorator = refs()
+        assert callable(decorator)
+
+        class Class2:
+            name: str = "two"
+
+        result2 = decorator(Class2)
+        assert hasattr(result2, "__dataclass_fields__")

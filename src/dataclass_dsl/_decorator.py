@@ -42,16 +42,47 @@ from collections.abc import Callable
 from dataclasses import MISSING
 from dataclasses import dataclass as make_dataclass
 from dataclasses import field as dc_field
-from typing import Any, TypeVar, dataclass_transform
+from typing import Any, Protocol, TypeVar, dataclass_transform, overload
 
 from dataclass_dsl._attr_ref import AttrRef
 from dataclass_dsl._metaclass import RefMeta
 from dataclass_dsl._registry import ResourceRegistry
 from dataclass_dsl._utils import apply_metaclass
 
-__all__ = ["create_decorator"]
+__all__ = ["create_decorator", "DecoratorType"]
 
 T = TypeVar("T")
+
+
+class DecoratorType(Protocol):
+    """Type signature for the decorator returned by create_decorator().
+
+    Use this type when accepting a dataclass-dsl decorator as a parameter:
+
+        from dataclass_dsl import create_decorator, DecoratorType
+
+        def apply_decorator(decorator: DecoratorType, cls: type) -> type:
+            return decorator(cls)
+
+    Supports:
+    - @refs (direct class decoration)
+    - @refs() (called without class, returns decorator)
+    - @refs(register=False) (called with kwargs, returns decorator)
+    """
+
+    @overload
+    def __call__(self, cls: type[T], /) -> type[T]: ...
+    @overload
+    def __call__(
+        self, cls: None = None, /, *, register: bool = True
+    ) -> Callable[[type[T]], type[T]]: ...
+    def __call__(
+        self,
+        cls: type[T] | None = None,
+        /,
+        *,
+        register: bool = True,
+    ) -> type[T] | Callable[[type[T]], type[T]]: ...
 
 # Default marker attribute name
 DEFAULT_MARKER = "_refs_marker"
@@ -66,7 +97,7 @@ def create_decorator(
     pre_process: Callable[[type[T]], type[T]] | None = None,
     post_process: Callable[[type[T]], type[T]] | None = None,
     get_resource_type: Callable[[type[T]], type[Any] | str | None] | None = None,
-) -> Callable[[type[T]], type[T]]:
+) -> DecoratorType:
     """
     Create a decorator for declarative dataclass resources.
 
@@ -258,4 +289,4 @@ def create_decorator(
             return decorator
         return decorator(maybe_cls)
 
-    return decorator_factory  # type: ignore[return-value]
+    return decorator_factory  # type: ignore[return-value]  # Cast to _DecoratorProtocol
