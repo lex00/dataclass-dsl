@@ -624,12 +624,13 @@ def _auto_decorate_resources(
     decorator: Callable[[type], type],
     resource_field: str = "resource",
     marker_attr: str = "_refs_marker",
+    resource_predicate: Callable[[type], bool] | None = None,
 ) -> dict[type, type]:
-    """Auto-decorate classes that have a resource annotation.
+    """Auto-decorate classes that have a resource annotation or match a predicate.
 
     This enables the "invisible decorator" pattern where classes
-    with a `resource:` annotation are automatically decorated without
-    needing an explicit decorator.
+    with a `resource:` annotation (or matching a predicate) are automatically
+    decorated without needing an explicit decorator.
 
     Classes that are already decorated (have the marker attribute) are skipped.
 
@@ -639,7 +640,12 @@ def _auto_decorate_resources(
         package_globals: The package's globals dict containing classes.
         decorator: The decorator function to apply to each class.
         resource_field: The annotation field that identifies resource classes.
+            Ignored if resource_predicate is provided.
         marker_attr: The attribute set by the decorator to mark decorated classes.
+        resource_predicate: Optional predicate function that returns True for
+            classes that should be decorated. When provided, takes precedence
+            over resource_field annotation checking. Enables inheritance-based
+            patterns like `issubclass(cls, BaseResource)`.
 
     Returns:
         Mapping from old (pre-decorated) classes to new (decorated) classes.
@@ -652,10 +658,16 @@ def _auto_decorate_resources(
         if not isinstance(obj, type):
             continue
 
-        # Check for resource annotation
-        annotations = getattr(obj, "__annotations__", {})
-        if resource_field not in annotations:
-            continue
+        # Determine if this class should be decorated
+        if resource_predicate is not None:
+            # Use predicate for detection (inheritance-based pattern)
+            if not resource_predicate(obj):
+                continue
+        else:
+            # Fall back to annotation-based detection
+            annotations = getattr(obj, "__annotations__", {})
+            if resource_field not in annotations:
+                continue
 
         # Skip if already decorated (has marker attribute)
         if hasattr(obj, marker_attr):
@@ -732,6 +744,7 @@ def setup_resources(
     decorator: Callable[[type], type] | None = None,
     resource_field: str = "resource",
     marker_attr: str = "_refs_marker",
+    resource_predicate: Callable[[type], bool] | None = None,
 ) -> None:
     """
     Set up resource imports with topological ordering for `from . import *`.
@@ -742,7 +755,7 @@ def setup_resources(
     3. Builds a dependency graph from the patterns
     4. Imports modules in topological order
     5. Injects previously-loaded classes into each module's namespace
-    6. Optionally auto-decorates classes with resource annotations
+    6. Optionally auto-decorates classes with resource annotations or predicates
     7. Optionally generates .pyi stubs for IDE support
 
     Args:
@@ -755,13 +768,19 @@ def setup_resources(
             namespace before execution. Useful for domain packages to inject
             decorators, type markers, and helper functions.
         auto_decorate: If True, automatically decorate classes that have a
-            resource annotation. This enables the "invisible decorator" pattern.
+            resource annotation or match resource_predicate. This enables the
+            "invisible decorator" pattern.
         decorator: The decorator function to apply when auto_decorate is True.
             Required if auto_decorate is True.
         resource_field: The annotation field that identifies resource classes
-            for auto-decoration (default: "resource").
+            for auto-decoration (default: "resource"). Ignored if
+            resource_predicate is provided.
         marker_attr: The attribute set by the decorator to mark decorated
             classes, used to skip already-decorated classes (default: "_refs_marker").
+        resource_predicate: Optional predicate function that returns True for
+            classes that should be decorated. When provided, takes precedence
+            over resource_field annotation checking. Enables inheritance-based
+            patterns like `issubclass(cls, BaseResource)`.
 
     Example:
         # In mypackage/objects/__init__.py
@@ -782,6 +801,18 @@ def setup_resources(
             __file__, __name__, globals(),
             auto_decorate=True,
             decorator=my_decorator,
+        )
+
+    Example with resource_predicate (inheritance pattern):
+        # In mypackage/objects/__init__.py
+        from dataclass_dsl import setup_resources, create_decorator
+
+        my_decorator = create_decorator()
+        setup_resources(
+            __file__, __name__, globals(),
+            auto_decorate=True,
+            decorator=my_decorator,
+            resource_predicate=lambda cls: issubclass(cls, BaseResource),
         )
     """
     if auto_decorate and decorator is None:
@@ -875,14 +906,15 @@ def setup_resources(
                 _resolve_class_placeholders(obj, shared_namespace)
 
     # 7. Auto-decorate resource classes if enabled
-    # This applies the decorator to classes with resource annotations,
-    # enabling the "invisible decorator" pattern
+    # This applies the decorator to classes with resource annotations
+    # or matching the resource_predicate, enabling the "invisible decorator" pattern
     if auto_decorate and decorator is not None:
         _auto_decorate_resources(
             package_globals,
             decorator,
             resource_field=resource_field,
             marker_attr=marker_attr,
+            resource_predicate=resource_predicate,
         )
 
     # 8. Set __all__ for star imports
