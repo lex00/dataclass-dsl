@@ -348,6 +348,89 @@ class TestAutoDecorateResources:
         assert hasattr(package_globals["MyResource"], "_refs_marker")
         assert MyResource in class_mapping
 
+    def test_resource_predicate(self):
+        """Test using resource_predicate for inheritance-based detection."""
+        from dataclass_dsl import create_decorator
+
+        class BaseResource:
+            """Base class for resources."""
+
+            pass
+
+        class MyResource(BaseResource):
+            name = "test"
+
+        class NotAResource:
+            name = "other"
+
+        decorator = create_decorator()
+        package_globals = {"MyResource": MyResource, "NotAResource": NotAResource}
+
+        # Predicate detects subclasses of BaseResource
+        def predicate(cls: type) -> bool:
+            return (
+                isinstance(cls, type)
+                and issubclass(cls, BaseResource)
+                and cls is not BaseResource
+            )
+
+        class_mapping = _auto_decorate_resources(
+            package_globals, decorator, resource_predicate=predicate
+        )
+
+        # MyResource should be decorated (subclass of BaseResource)
+        assert hasattr(package_globals["MyResource"], "_refs_marker")
+        assert MyResource in class_mapping
+
+        # NotAResource should NOT be decorated
+        assert not hasattr(package_globals["NotAResource"], "_refs_marker")
+        assert NotAResource not in class_mapping
+
+    def test_resource_predicate_overrides_resource_field(self):
+        """Test that resource_predicate takes precedence over resource_field."""
+        from dataclass_dsl import create_decorator
+
+        class BaseResource:
+            pass
+
+        class ResourceType:
+            pass
+
+        # This class has resource annotation but is NOT a BaseResource subclass
+        class AnnotatedButNotSubclass:
+            resource: ResourceType
+            name = "test"
+
+        # This class IS a BaseResource subclass but has no annotation
+        class SubclassButNotAnnotated(BaseResource):
+            name = "other"
+
+        decorator = create_decorator()
+        package_globals = {
+            "AnnotatedButNotSubclass": AnnotatedButNotSubclass,
+            "SubclassButNotAnnotated": SubclassButNotAnnotated,
+        }
+
+        # Predicate detects subclasses of BaseResource only
+        def predicate(cls: type) -> bool:
+            return (
+                isinstance(cls, type)
+                and issubclass(cls, BaseResource)
+                and cls is not BaseResource
+            )
+
+        class_mapping = _auto_decorate_resources(
+            package_globals, decorator, resource_predicate=predicate
+        )
+
+        # SubclassButNotAnnotated SHOULD be decorated (matches predicate)
+        assert hasattr(package_globals["SubclassButNotAnnotated"], "_refs_marker")
+        assert SubclassButNotAnnotated in class_mapping
+
+        # AnnotatedButNotSubclass should NOT be decorated (doesn't match predicate)
+        assert not hasattr(package_globals["AnnotatedButNotSubclass"], "_refs_marker")
+        assert AnnotatedButNotSubclass not in class_mapping
+
 
 class TestUpdateAttrRefs:
     """Tests for _update_attr_refs function."""
@@ -509,4 +592,79 @@ class DependentResource:
             # Clean up sys.modules
             for mod_name in list(sys.modules.keys()):
                 if mod_name.startswith("test_pkg"):
+                    del sys.modules[mod_name]
+
+    def test_resource_predicate_inheritance_pattern(self, tmp_path):
+        """Test resource_predicate for inheritance-based resource detection."""
+        from dataclass_dsl import create_decorator, setup_resources
+
+        # Create a test package
+        pkg_dir = tmp_path / "predicate_pkg"
+        pkg_dir.mkdir()
+
+        # Create __init__.py
+        (pkg_dir / "__init__.py").write_text("")
+
+        # Create base resource type and resources using inheritance
+        (pkg_dir / "resources.py").write_text(
+            """
+class BaseResource:
+    '''Base class for all resources.'''
+    pass
+
+class MyBucket(BaseResource):
+    bucket_name = "my-data"
+
+class NotAResource:
+    '''Regular class, not a resource.'''
+    name = "other"
+"""
+        )
+
+        # Run setup_resources with resource_predicate
+        decorator = create_decorator()
+        package_globals: dict = {}
+
+        import sys
+
+        # Predicate for inheritance pattern
+        def is_resource(cls: type) -> bool:
+            # We need to check if it's a subclass of BaseResource
+            # But BaseResource is defined in the module, so we check by name
+            for base in cls.__mro__[1:]:  # Skip the class itself
+                if base.__name__ == "BaseResource":
+                    return True
+            return False
+
+        sys.path.insert(0, str(tmp_path))
+        try:
+            setup_resources(
+                str(pkg_dir / "__init__.py"),
+                "predicate_pkg",
+                package_globals,
+                auto_decorate=True,
+                decorator=decorator,
+                resource_predicate=is_resource,
+                generate_stubs=False,
+            )
+
+            # Check that classes were loaded
+            assert "BaseResource" in package_globals
+            assert "MyBucket" in package_globals
+            assert "NotAResource" in package_globals
+
+            # MyBucket SHOULD be decorated (subclass of BaseResource)
+            assert hasattr(package_globals["MyBucket"], "_refs_marker")
+
+            # NotAResource should NOT be decorated
+            assert not hasattr(package_globals["NotAResource"], "_refs_marker")
+
+            # BaseResource itself should NOT be decorated (it's the base class)
+            assert not hasattr(package_globals["BaseResource"], "_refs_marker")
+
+        finally:
+            sys.path.remove(str(tmp_path))
+            # Clean up sys.modules
+            for mod_name in list(sys.modules.keys()):
+                if mod_name.startswith("predicate_pkg"):
                     del sys.modules[mod_name]
