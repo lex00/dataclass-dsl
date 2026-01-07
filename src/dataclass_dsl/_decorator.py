@@ -84,6 +84,7 @@ class DecoratorType(Protocol):
         register: bool = True,
     ) -> type[T] | Callable[[type[T]], type[T]]: ...
 
+
 # Default marker attribute name
 DEFAULT_MARKER = "_refs_marker"
 
