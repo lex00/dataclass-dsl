@@ -89,7 +89,7 @@ from dataclass_dsl._codegen import (
 )
 
 # Decorator factory
-from dataclass_dsl._decorator import create_decorator
+from dataclass_dsl._decorator import DecoratorType, create_decorator
 
 # Importer framework utilities
 from dataclass_dsl._importer import (
@@ -199,6 +199,7 @@ __all__ = [
     "RefMeta",
     # Decorator factory
     "create_decorator",
+    "DecoratorType",
     # Registry
     "ResourceRegistry",
     # Ordering utilities
