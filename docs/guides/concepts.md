@@ -4,7 +4,7 @@ This guide explains the fundamental patterns you'll use when writing declarative
 
 ## Table of Contents
 
-1. [The Wrapper Pattern](#the-wrapper-pattern)
+1. [The Inheritance Pattern](#the-inheritance-pattern)
 2. [The No-Parens Principle](#the-no-parens-principle)
 3. [References](#references)
 4. [Multi-File Organization](#multi-file-organization)
@@ -13,24 +13,22 @@ This guide explains the fundamental patterns you'll use when writing declarative
 
 ---
 
-## The Wrapper Pattern
+## The Inheritance Pattern
 
-The core pattern is **wrapping**: you create a class that wraps an underlying resource type.
+The core pattern is **inheritance**: you create a class that inherits from an underlying resource type.
 
 ```python
-class LogBucket:
-    resource: s3.Bucket        # The type being wrapped
+class LogBucket(s3.Bucket):    # Inherit from the resource type
     bucket_name = "app-logs"   # Properties of that type
 ```
 
-**Why wrapping?**
+**Why inheritance?**
 
 1. **Naming**: Your class name (`LogBucket`) becomes the logical resource name
 2. **Referencing**: Other resources refer to `LogBucket`, not a string ID
 3. **Type safety**: The domain package knows what properties are valid for `s3.Bucket`
-4. **Flat structure**: All properties are class attributes, no nesting
-
-**The `resource` field is special**: It declares what you're wrapping. It's a type annotation only — never assigned a value.
+4. **IDE support**: Full autocomplete and type checking from the base class
+5. **Flat structure**: All properties are class attributes, no nesting
 
 ---
 
@@ -39,8 +37,7 @@ class LogBucket:
 References to other resources are expressed as **class names without parentheses**:
 
 ```python
-class AppSubnet:
-    resource: Subnet
+class AppSubnet(Subnet):
     vpc = AppVPC              # Reference — just the class name
     cidr_block = "10.0.1.0/24"
 ```
@@ -52,8 +49,7 @@ Compare to traditional approaches:
 subnet = Subnet(self, "AppSubnet", vpc=app_vpc, cidr_block="10.0.1.0/24")
 
 # dataclass-dsl style (flat, no function calls for references)
-class AppSubnet:
-    resource: Subnet
+class AppSubnet(Subnet):
     vpc = AppVPC
     cidr_block = "10.0.1.0/24"
 ```
@@ -76,8 +72,7 @@ The domain package automatically detects references by analyzing your classes.
 Reference another resource by class name:
 
 ```python
-class WebServer:
-    resource: Instance
+class WebServer(Instance):
     subnet = WebSubnet        # Reference to WebSubnet
 ```
 
@@ -86,8 +81,7 @@ class WebServer:
 Reference a specific attribute of another resource:
 
 ```python
-class LambdaFunction:
-    resource: Function
+class LambdaFunction(Function):
     role_arn = ExecutionRole.Arn  # Gets the Arn of ExecutionRole
 ```
 
@@ -98,12 +92,10 @@ This is useful when you need a specific output (like an ARN, ID, or endpoint) ra
 Lists and dicts can contain references:
 
 ```python
-class LoadBalancer:
-    resource: ALB
+class LoadBalancer(ALB):
     subnets = [SubnetA, SubnetB, SubnetC]  # List of references
 
-class SecurityConfig:
-    resource: SecurityGroup
+class SecurityConfig(SecurityGroup):
     rules = {
         "web": WebRule,
         "api": ApiRule,
@@ -128,12 +120,10 @@ Resources are typically organized across multiple files with a single import:
 ```python
 from . import *
 
-class AppVPC:
-    resource: VPC
+class AppVPC(VPC):
     cidr_block = "10.0.0.0/16"
 
-class WebSubnet:
-    resource: Subnet
+class WebSubnet(Subnet):
     vpc = AppVPC
     cidr_block = "10.0.1.0/24"
 ```
@@ -142,8 +132,7 @@ class WebSubnet:
 ```python
 from . import *
 
-class WebServer:
-    resource: Instance
+class WebServer(Instance):
     subnet = WebSubnet        # Available from networking.py
     instance_type = "t3.medium"
 ```
@@ -168,8 +157,7 @@ The domain package handles:
 Some values are resolved at serialization or deployment time, not when you write the code:
 
 ```python
-class MyBucket:
-    resource: Bucket
+class MyBucket(Bucket):
     bucket_name = Sub("${AWS::AccountId}-app-data")
 ```
 
@@ -188,8 +176,7 @@ The exact syntax depends on your domain package and target platform.
 The same resource declarations can produce different output formats:
 
 ```python
-class MySubnet:
-    resource: Subnet
+class MySubnet(Subnet):
     vpc = MyVPC
     cidr_block = "10.0.1.0/24"
 ```
@@ -231,25 +218,21 @@ A complete example showing multiple concepts:
 from . import *
 
 # Networking
-class AppVPC:
-    resource: VPC
+class AppVPC(VPC):
     cidr_block = "10.0.0.0/16"
     enable_dns_hostnames = True
 
-class WebSubnet:
-    resource: Subnet
+class WebSubnet(Subnet):
     vpc = AppVPC
     cidr_block = "10.0.1.0/24"
     availability_zone = Sub("${AWS::Region}a")
 
-class WebSecurityGroup:
-    resource: SecurityGroup
+class WebSecurityGroup(SecurityGroup):
     vpc = AppVPC
     description = "Web server security group"
 
 # Compute
-class WebServer:
-    resource: Instance
+class WebServer(Instance):
     subnet = WebSubnet
     security_groups = [WebSecurityGroup]
     instance_type = "t3.medium"
@@ -267,9 +250,9 @@ Notice:
 
 | Goal | How It's Achieved |
 |------|-------------------|
-| **Flat** | Wrapper pattern with class attributes, no nesting |
+| **Flat** | Inheritance pattern with class attributes, no nesting |
 | **Readable** | No-parens references, declarative style |
-| **Type-safe** | Resource type annotations, IDE support |
+| **Type-safe** | Inheritance from resource types, IDE support |
 | **Multi-format** | Same declarations, different outputs |
 
 ---
@@ -283,8 +266,7 @@ Domain packages may provide additional features:
 Properties derived from other properties:
 
 ```python
-class NamingConvention:
-    resource: Bucket
+class NamingConvention(Bucket):
     environment = "prod"
     app_name = "myapp"
 
@@ -298,8 +280,7 @@ class NamingConvention:
 Properties that vary based on context:
 
 ```python
-class Database:
-    resource: DBInstance
+class Database(DBInstance):
     multi_az = when(
         condition=IsProduction,
         then_value=True,
@@ -312,8 +293,7 @@ class Database:
 Resources created only under certain conditions:
 
 ```python
-class BastionHost:
-    resource: Instance
+class BastionHost(Instance):
     condition = EnableBastion
     instance_type = "t3.micro"
 ```

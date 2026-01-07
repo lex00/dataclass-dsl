@@ -8,8 +8,7 @@
 from . import *  # noqa: F403, F405
 
 
-class LogBucket:
-    resource: s3.Bucket
+class LogBucket(s3.Bucket):
     bucket_encryption = LogBucketEncryption
     public_access_block_configuration = LogBucketPublicAccessBlock
     versioning_configuration = LogBucketVersioning

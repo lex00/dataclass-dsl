@@ -7,29 +7,24 @@
 from . import *  # noqa: F403, F405
 
 
-class LogBucketEncryptionDefault:
-    resource: s3.Bucket.ServerSideEncryptionByDefault
+class LogBucketEncryptionDefault(s3.Bucket.ServerSideEncryptionByDefault):
     sse_algorithm = s3.ServerSideEncryption.AES256
 
 
-class LogBucketEncryptionRule:
-    resource: s3.Bucket.ServerSideEncryptionRule
+class LogBucketEncryptionRule(s3.Bucket.ServerSideEncryptionRule):
     server_side_encryption_by_default = LogBucketEncryptionDefault
 
 
-class LogBucketEncryption:
-    resource: s3.Bucket.BucketEncryption
+class LogBucketEncryption(s3.Bucket.BucketEncryption):
     server_side_encryption_configuration = [LogBucketEncryptionRule]
 
 
-class LogBucketPublicAccessBlock:
-    resource: s3.Bucket.PublicAccessBlockConfiguration
+class LogBucketPublicAccessBlock(s3.Bucket.PublicAccessBlockConfiguration):
     block_public_acls = True
     block_public_policy = True
     ignore_public_acls = True
     restrict_public_buckets = True
 
 
-class LogBucketVersioning:
-    resource: s3.Bucket.VersioningConfiguration
+class LogBucketVersioning(s3.Bucket.VersioningConfiguration):
     status = s3.BucketVersioningStatus.ENABLED

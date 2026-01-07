@@ -164,9 +164,7 @@ setup_resources(
 ```python
 from . import *
 
-@my_decorator
-class AppVPC:
-    resource: VPC
+class AppVPC(VPC):
     cidr_block = "10.0.0.0/16"
 ```
 
@@ -174,9 +172,7 @@ class AppVPC:
 ```python
 from . import *
 
-@my_decorator
-class AppSubnet:
-    resource: Subnet
+class AppSubnet(Subnet):
     vpc = AppVPC  # Available because vpc.py loaded first
     cidr_block = "10.0.1.0/24"
 ```
@@ -234,19 +230,14 @@ setup_resources(
 )
 ```
 
-This automatically decorates any class with a `resource:` annotation:
+This automatically decorates any class that inherits from a resource type:
 
 ```python
 # User writes this (no decorator):
-class LogBucket:
-    resource: s3.Bucket
+class LogBucket(s3.Bucket):
     bucket_encryption = LogBucketEncryption
 
-# Becomes equivalent to:
-@my_decorator
-class LogBucket:
-    resource: s3.Bucket
-    bucket_encryption = LogBucketEncryption
+# The loader automatically applies the decorator
 ```
 
 **Options:**
@@ -255,13 +246,12 @@ class LogBucket:
 |-----------|---------|-------------|
 | `auto_decorate` | `False` | Enable auto-decoration |
 | `decorator` | Required | The decorator function to apply |
-| `resource_field` | `"resource"` | Annotation field that identifies resource classes |
 | `marker_attr` | `"_refs_marker"` | Attribute used to detect already-decorated classes |
 
 **How it works:**
 
 1. After all modules are loaded, `setup_resources()` scans `package_globals`
-2. For each class with a `resource:` annotation that isn't already decorated, it applies the decorator
+2. For each class that inherits from a resource type and isn't already decorated, it applies the decorator
 3. AttrRef targets are updated to point to the new decorated classes (since decoration creates new class objects)
 
 ---
@@ -447,9 +437,9 @@ setup_resources(
 )
 ```
 
-This automatically decorates any class with a `resource:` annotation. See [Auto-Decoration](#auto-decoration) for details.
+This automatically decorates any class that inherits from a resource type. See [Auto-Decoration](#auto-decoration) for details.
 
-The key insight: the `resource:` type annotation marks a class for decoration, but the decorator is applied by the loader, not the user.
+The key insight: inheritance from a resource type marks a class for decoration, but the decorator is applied by the loader, not the user.
 
 ---
 
@@ -572,7 +562,7 @@ See [examples/aws_s3_log_bucket/](../examples/aws_s3_log_bucket/) for an example
 
 - Single import (`from . import *`)
 - No decorators visible to users
-- Flat wrapper classes with `resource:` type annotations
+- Inheritance-based wrapper classes
 - Type-safe references to AWS resource types
 - Composition through class references
 

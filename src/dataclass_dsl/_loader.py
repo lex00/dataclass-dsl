@@ -484,17 +484,15 @@ def _make_metaclass_applying_build_class(
     """Create a __build_class__ wrapper that applies RefMeta to resource classes.
 
     This enables the invisible decorator pattern for within-file forward refs.
-    When a class with a `resource:` annotation is defined, RefMeta is applied
+    When a class inherits from a resource type, RefMeta is applied
     immediately, so subsequent class definitions in the same file can use
     `.Arn` on the class.
 
     Example:
-        class MyRole:
-            resource: iam.Role
+        class MyRole(iam.Role):
             role_name = "my-role"
 
-        class MyFunction:
-            resource: lambda_.Function
+        class MyFunction(lambda_.Function):
             role = MyRole.Arn  # This works because MyRole already has RefMeta
 
     Returns:
@@ -626,10 +624,10 @@ def _auto_decorate_resources(
     marker_attr: str = "_refs_marker",
     resource_predicate: Callable[[type], bool] | None = None,
 ) -> dict[type, type]:
-    """Auto-decorate classes that have a resource annotation or match a predicate.
+    """Auto-decorate classes that inherit from resource types or match a predicate.
 
     This enables the "invisible decorator" pattern where classes
-    with a `resource:` annotation (or matching a predicate) are automatically
+    that inherit from resource types (or matching a predicate) are automatically
     decorated without needing an explicit decorator.
 
     Classes that are already decorated (have the marker attribute) are skipped.

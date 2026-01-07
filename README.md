@@ -10,12 +10,10 @@ Build declarative Python DSLs where infrastructure and configuration look like t
 ```python
 from . import *
 
-class LogBucketEncryption:
-    resource: s3.Bucket.BucketEncryption
+class LogBucketEncryption(s3.Bucket.BucketEncryption):
     server_side_encryption_configuration = [LogBucketEncryptionRule]
 
-class LogBucket:
-    resource: s3.Bucket
+class LogBucket(s3.Bucket):
     bucket_encryption = LogBucketEncryption
     public_access_block_configuration = LogBucketPublicAccessBlock
     versioning_configuration = LogBucketVersioning
@@ -31,7 +29,7 @@ Domain packages built on dataclass-dsl share three properties:
 |----------|---------------|
 | **Single import** | `from . import *` — everything available, loaded in dependency order |
 | **Zero decorators** | Classes are plain declarations, machinery is invisible |
-| **Flat wrappers** | Each class wraps a resource type with simple attribute assignments |
+| **Inheritance wrappers** | Each class inherits from a resource type with simple attribute assignments |
 
 The result reads like configuration, but with full Python power: IDE autocomplete, type checking, refactoring, and the ability to use variables, loops, and conditionals when needed.
 
@@ -39,34 +37,29 @@ The result reads like configuration, but with full Python power: IDE autocomplet
 
 **Reference other resources by class name:**
 ```python
-class AppSubnet:
-    resource: Subnet
+class AppSubnet(Subnet):
     vpc = AppVPC                    # Reference to another resource
     cidr_block = "10.0.1.0/24"
 ```
 
 **Reference specific attributes:**
 ```python
-class LambdaFunction:
-    resource: Function
+class LambdaFunction(Function):
     role_arn = ExecutionRole.Arn    # Gets the Arn of ExecutionRole
 ```
 
 **Compose nested configurations:**
 ```python
-class BucketEncryption:
-    resource: s3.Bucket.BucketEncryption
+class BucketEncryption(s3.Bucket.BucketEncryption):
     server_side_encryption_configuration = [EncryptionRule]
 
-class MyBucket:
-    resource: s3.Bucket
+class MyBucket(s3.Bucket):
     bucket_encryption = BucketEncryption
 ```
 
 **Use lists and maps of references:**
 ```python
-class LoadBalancer:
-    resource: ALB
+class LoadBalancer(ALB):
     subnets = [SubnetA, SubnetB, SubnetC]
     security_groups = [WebSecurityGroup]
 ```

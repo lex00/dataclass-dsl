@@ -12,10 +12,8 @@ Packages using dataclass-dsl often use centralized imports for clean, concise co
 ```python
 from . import *  # noqa: F403, F401
 
-@my_decorator
-class MyResource:
-    resource: SomeType
-    other: Ref[OtherResource] = None  # Available without explicit import
+class MyResource(SomeType):
+    other = OtherResource  # Available without explicit import
 ```
 
 This works at runtime because the package's `__init__.py` dynamically exports all necessary symbols. However, IDEs like VSCode/Pylance can't see these dynamic exports without help.

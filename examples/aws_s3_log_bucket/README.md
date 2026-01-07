@@ -50,12 +50,10 @@ This is why `storage.py` can use `from . import *` and reference classes that mi
 # Note: Split from bucket.py to demonstrate cross-file references.
 from . import *
 
-class LogBucketEncryptionDefault:
-    resource: s3.Bucket.ServerSideEncryptionByDefault
+class LogBucketEncryptionDefault(s3.Bucket.ServerSideEncryptionByDefault):
     sse_algorithm = s3.ServerSideEncryption.AES256
 
-class LogBucketEncryption:
-    resource: s3.Bucket.BucketEncryption
+class LogBucketEncryption(s3.Bucket.BucketEncryption):
     server_side_encryption_configuration = [LogBucketEncryptionRule]
 ...
 ```
@@ -67,8 +65,7 @@ class LogBucketEncryption:
 # here via `from . import *` — no explicit imports needed.
 from . import *
 
-class LogBucket:
-    resource: s3.Bucket
+class LogBucket(s3.Bucket):
     bucket_encryption = LogBucketEncryption
     public_access_block_configuration = LogBucketPublicAccessBlock
     versioning_configuration = LogBucketVersioning

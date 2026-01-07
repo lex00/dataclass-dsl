@@ -19,8 +19,7 @@ Declarations SHOULD avoid unnecessary nesting or constructor calls. Configuratio
 
 ```python
 # GOOD: Flat declaration
-class MyDatabase:
-    resource: DatabaseInstance
+class MyDatabase(DatabaseInstance):
     instance_class = "db.t3.micro"
     storage_size = 100
 
@@ -67,16 +66,14 @@ Resources and their relationships are first-class concepts. The system understan
 
 ---
 
-## 2. Wrapper Pattern
+## 2. Inheritance Pattern
 
 ### 2.1 Definition
 
-A **wrapper class** is a user-defined class that wraps a domain object (resource, configuration, entity) with a declarative interface.
+A **wrapper class** is a user-defined class that inherits from a domain type (resource, configuration, entity) with a declarative interface.
 
 ```python
-@decorator
-class MyBucket:
-    resource: Bucket           # Declares the underlying type
+class MyBucket(Bucket):        # Inherits from the resource type
     bucket_name = "data"       # Configuration field
     encryption = MyEncryption  # Reference to another wrapper
 ```
@@ -84,9 +81,9 @@ class MyBucket:
 ### 2.2 Requirements
 
 A wrapper class MUST:
-1. Declare the underlying resource type via a `resource` field (or equivalent)
+1. Inherit from the underlying resource type
 2. Express configuration as class-level field assignments
-3. Be processed by a decorator that handles registration and serialization
+3. Be processed by a decorator (or metaclass) that handles registration and serialization
 
 ### 2.3 Field Types
 
@@ -107,9 +104,7 @@ A wrapper class MUST:
 When a class attribute's value is another wrapper class, implementations MUST detect this as a reference relationship.
 
 ```python
-@decorator
-class MySubnet:
-    resource: Subnet
+class MySubnet(Subnet):
     network = MyNetwork  # Detected as Ref[MyNetwork]
 ```
 
@@ -118,9 +113,7 @@ class MySubnet:
 When a class attribute's value is an attribute access on another wrapper class, implementations MUST detect this as an attribute reference.
 
 ```python
-@decorator
-class MyFunction:
-    resource: Function
+class MyFunction(Function):
     role = MyRole.Arn  # Detected as Attr[MyRole, "Arn"]
 ```
 
@@ -129,9 +122,7 @@ class MyFunction:
 Implementations MUST recursively process lists and dicts for references:
 
 ```python
-@decorator
-class MyFunction:
-    resource: Function
+class MyFunction(Function):
     security_groups = [SG1, SG2, SG3]  # Each element is a reference
     environment = {
         "DB_HOST": MyDatabase,          # Reference
@@ -250,9 +241,7 @@ class Context:
 Resources can reference context values using `ContextRef`:
 
 ```python
-@decorator
-class MyResource:
-    resource: SomeType
+class MyResource(SomeType):
     name = ContextRef("project")  # Resolved at serialization
 ```
 
@@ -350,9 +339,9 @@ When circular dependencies exist (A → B → A):
 
 > **Note:** These patterns are recommended approaches for domain packages to implement. They are not provided by dataclass-dsl core but can be built using standard Python features.
 
-### 11.1 Presets (Inheritance-Based Defaults)
+### 11.1 Presets (Mixin-Based Defaults)
 
-Base classes can provide default configurations using `__init_subclass__`:
+Mixin classes can provide default configurations using `__init_subclass__`:
 
 ```python
 class EncryptedStorage:
@@ -360,11 +349,9 @@ class EncryptedStorage:
         if not hasattr(cls, 'encryption'):
             cls.encryption = DefaultEncryption
 
-@decorator
-class MyBucket(EncryptedStorage):
-    resource: Bucket
+class MyBucket(EncryptedStorage, Bucket):
     name = "data"
-    # encryption inherited
+    # encryption inherited from mixin
 ```
 
 ### 11.2 Traits (Cross-Cutting Concerns)
@@ -376,9 +363,8 @@ class Tagged:
     def __init_subclass__(cls, environment: str, team: str, **kwargs):
         cls._tags = [("Environment", environment), ("Team", team)]
 
-@decorator
-class MyBucket(Tagged, environment="prod", team="platform"):
-    resource: Bucket
+class MyBucket(Tagged, Bucket, environment="prod", team="platform"):
+    pass
 ```
 
 ---
@@ -396,9 +382,7 @@ Computed values are derived from other fields at serialization time.
 Domain packages MAY implement a `@computed` decorator:
 
 ```python
-@decorator
-class MyBucket:
-    resource: Bucket
+class MyBucket(Bucket):
     project: str
     environment: str
 
@@ -429,9 +413,7 @@ Conditional values allow configuration to vary based on context.
 Domain packages MAY implement conditional helpers like `when()`:
 
 ```python
-@decorator
-class MyDatabase:
-    resource: Database
+class MyDatabase(Database):
     instance_class = when(
         ENVIRONMENT == "production",
         then="db.r5.large",
