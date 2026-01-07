@@ -267,7 +267,10 @@ def create_decorator(
             cls = make_dataclass(cls)
 
             # Apply RefMeta metaclass to enable no-parens attribute access
-            cls = apply_metaclass(cls, RefMeta)
+            # Skip if already applied (e.g., by loader's __build_class__ hook)
+            # This preserves class identity for AttrRef targets (Issue #10)
+            if not isinstance(cls, RefMeta):
+                cls = apply_metaclass(cls, RefMeta)
 
             # Mark as a decorated class
             setattr(cls, marker_attr, True)

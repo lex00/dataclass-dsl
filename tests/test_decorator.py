@@ -289,3 +289,111 @@ class TestCreateDecorator:
 
         result2 = decorator(Class2)
         assert hasattr(result2, "__dataclass_fields__")
+
+    def test_attr_ref_target_identity(self):
+        """Test that AttrRef targets have correct identity after decoration.
+
+        When using the no-parens pattern (e.g., Role.Arn), the AttrRef.target
+        should be the same object as the decorated class, not a different object.
+
+        This is critical for identity comparison:
+            role_ref = Function.role  # AttrRef
+            role_ref.target is Role   # Should be True!
+
+        Issue #10: Decorator was creating new class objects, breaking this.
+        """
+        refs = create_decorator()
+
+        @refs
+        class Role:
+            name: str = "test-role"
+
+        @refs
+        class Function:
+            role = Role.Arn  # AttrRef with target=Role
+
+        # Get the AttrRef from the decorated class
+        func = Function()
+        role_ref = func.role
+
+        # The AttrRef target MUST be the same object as the decorated Role
+        assert isinstance(role_ref, AttrRef)
+        assert role_ref.target is Role, (
+            f"AttrRef.target should be identical to Role. "
+            f"Got id(target)={id(role_ref.target)}, id(Role)={id(Role)}"
+        )
+
+    def test_class_ref_target_identity(self):
+        """Test that class reference defaults have correct identity.
+
+        When assigning a class directly (e.g., parent = Role), the default
+        value should be the decorated class, not a pre-decoration version.
+        """
+        refs = create_decorator()
+
+        @refs
+        class Role:
+            name: str = "test-role"
+
+        @refs
+        class Function:
+            parent = Role  # Direct class reference
+
+        # Get the class reference from the decorated class
+        func = Function()
+
+        # The default value MUST be the same object as the decorated Role
+        assert func.parent is Role, (
+            f"Class reference default should be identical to Role. "
+            f"Got id(parent)={id(func.parent)}, id(Role)={id(Role)}"
+        )
+
+    def test_preserves_class_identity_when_metaclass_already_applied(self):
+        """Test decorator preserves class identity when RefMeta already applied.
+
+        When using setup_resources() with __build_class__ hook, RefMeta is
+        applied during class definition for forward reference support.
+        The decorator should NOT create a new class when RefMeta is already
+        the metaclass, preserving class identity for AttrRef targets.
+
+        Issue #10: Decorator was calling apply_metaclass() unconditionally,
+        creating a new class even when RefMeta was already applied.
+        """
+        from dataclass_dsl._metaclass import RefMeta
+        from dataclass_dsl._utils import apply_metaclass
+
+        refs = create_decorator()
+
+        # Simulate the loader's __build_class__ hook: apply RefMeta first
+        class Role:
+            name: str = "test-role"
+
+        # Apply RefMeta (simulating what __build_class__ hook does)
+        Role = apply_metaclass(Role, RefMeta)
+        role_id_before = id(Role)
+
+        # Now create Function that references Role.Arn
+        class Function:
+            role = Role.Arn  # AttrRef with target=Role (RefMeta-applied)
+
+        Function = apply_metaclass(Function, RefMeta)
+
+        # Apply the full decorator to both
+        Role = refs(Role)
+        Function = refs(Function)
+
+        # After decoration, Role should be the SAME object (identity preserved)
+        # because RefMeta was already applied
+        assert id(Role) == role_id_before, (
+            f"Decorator should NOT create new class when RefMeta already applied. "
+            f"Expected id={role_id_before}, got id={id(Role)}"
+        )
+
+        # The AttrRef target should still point to the correct class
+        func = Function()
+        role_ref = func.role
+        assert isinstance(role_ref, AttrRef)
+        assert role_ref.target is Role, (
+            f"AttrRef.target should be identical to decorated Role. "
+            f"Got id(target)={id(role_ref.target)}, id(Role)={id(Role)}"
+        )
