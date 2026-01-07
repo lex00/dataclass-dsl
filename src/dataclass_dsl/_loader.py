@@ -860,9 +860,15 @@ def setup_resources(
     for mod_name in import_order:
         full_mod_name = f"{package_name}.{mod_name}"
 
-        # Skip if already imported (shouldn't happen with topological order)
+        # Handle pre-loaded modules (can happen with circular imports or
+        # if user imports a file before calling setup_resources)
         if full_mod_name in sys.modules:
             module = sys.modules[full_mod_name]
+            # Inject namespace into pre-loaded module so it has access to
+            # service modules and other injected names
+            for name, obj in shared_namespace.items():
+                if not hasattr(module, name):
+                    setattr(module, name, obj)
         else:
             # Load module with namespace injection BEFORE execution
             # Pass local class names for placeholder injection (forward refs)
